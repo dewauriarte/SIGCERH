@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+
+# Storage (mantener .gitkeep)
+storage/*
+!storage/.gitkeep
+!storage/*/
+storage/*/**
+!storage/**/.gitkeep
+
+# Uploads (legacy)
+uploads/
+
+# Logs (mantener .gitkeep)
+logs/*
+!logs/.gitkeep
+
+# Prisma
+prisma/migrations/
+

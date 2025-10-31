@@ -1,0 +1,7 @@
+DNI,Nombres,ApellidoPaterno,ApellidoMaterno,FechaNacimiento,LugarNacimiento,Sexo,Direccion,Telefono,Email,NombrePadre,NombreMadre
+12345678,Juan Carlos,García,López,1995-05-15,Lima,M,Av. Principal 123,987654321,juan.garcia@example.com,Carlos García,María López
+23456789,Ana María,Torres,Vega,1996-08-20,Arequipa,F,Jr. Los Pinos 456,987654322,ana.torres@example.com,Pedro Torres,Rosa Vega
+34567890,Luis Fernando,Rodríguez,Mendoza,1995-12-10,Cusco,M,Calle Real 789,987654323,luis.rodriguez@example.com,Fernando Rodríguez,Carmen Mendoza
+45678901,María Isabel,Sánchez,Flores,1996-03-25,Trujillo,F,Av. Universitaria 321,987654324,maria.sanchez@example.com,Roberto Sánchez,Isabel Flores
+56789012,Carlos Alberto,Martínez,Rojas,1995-07-30,Piura,M,Jr. San Martín 654,987654325,carlos.martinez@example.com,Alberto Martínez,Patricia Rojas
+

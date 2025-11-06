@@ -1,17 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run prisma:studio:*)",
-      "Bash(psql:*)",
-      "Bash(timeout 10 psql:*)",
-      "Bash(npm test)",
-      "Bash(npm run dev:*)",
-      "Bash(cat:*)",
-      "Bash(npm run prisma:generate:*)",
-      "Bash(curl:*)",
-      "Bash(npx tsx:*)",
-      "Bash(npm run build:*)",
-      "Bash(find:*)"
+      "Bash(dir %APPDATA%)",
+      "Bash(findstr:*)",
+      "Bash(cmd /c \"echo %APPDATA%\")",
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "WebSearch",
+      "Bash(claude mcp list:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(claude mcp add --help:*)",
+      "Bash(claude mcp add:*)"
     ],
     "deny": [],
     "ask": []

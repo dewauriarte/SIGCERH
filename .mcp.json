@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "netlify": {
+      "type": "http",
+      "url": "https://mcp.netlify.app"
+    },
+    "stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com/"
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/"
+    },
+    "sendgrid": {
+      "type": "http",
+      "url": "https://mcp.sendgrid.com/"
+    },
+    "twilio": {
+      "type": "http",
+      "url": "https://mcp.twilio.com/"
+    },
+    "gemini": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "C:/",
+        "npx",
+        "-y",
+        "@aliargun/mcp-server-gemini"
+      ],
+      "env": {
+        "GOOGLE_API_KEY": ""
+      }
+    }
+  }
+}

@@ -1,1 +1,166 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* Light mode colors */
+  --color-background: #ffffff;
+  --color-foreground: #0a0a0a;
+  --color-card: #ffffff;
+  --color-card-foreground: #0a0a0a;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #0a0a0a;
+  --color-primary: #0a0a0a;
+  --color-primary-foreground: #fafafa;
+  --color-secondary: #f8f8f8;
+  --color-secondary-foreground: #0a0a0a;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #0a0a0a;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fafafa;
+  --color-border: #dcdcdc;
+  --color-input: #dcdcdc;
+  --color-ring: #3a3a3e;
+  --radius: 0.5rem;
+  /* Sidebar light mode */
+  --color-sidebar: #ffffff;
+  --color-sidebar-foreground: #0a0a0a;
+  --color-sidebar-primary: #0a0a0a;
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #f4f4f5;
+  --color-sidebar-accent-foreground: #0a0a0a;
+  --color-sidebar-border: #e4e4e7;
+  --color-sidebar-ring: #0a0a0a;
+}
+
+.dark {
+  --color-background: #000000;
+  --color-foreground: #fafafa;
+  --color-card: #0a0a0a;
+  --color-card-foreground: #fafafa;
+  --color-popover: #0a0a0a;
+  --color-popover-foreground: #fafafa;
+  --color-primary: #fafafa;
+  --color-primary-foreground: #000000;
+  --color-secondary: #1a1a1c;
+  --color-secondary-foreground: #fafafa;
+  --color-muted: #0d0d0d;
+  --color-muted-foreground: #a1a1aa;
+  --color-accent: #0d0d0d;
+  --color-accent-foreground: #fafafa;
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #fafafa;
+  --color-border: #2a2a2e;
+  --color-input: #2a2a2e;
+  --color-ring: #3a3a3e;
+  /* Sidebar dark mode */
+  --color-sidebar: #000000;
+  --color-sidebar-foreground: #fafafa;
+  --color-sidebar-primary: #fafafa;
+  --color-sidebar-primary-foreground: #000000;
+  --color-sidebar-accent: #0a0a0a;
+  --color-sidebar-accent-foreground: #fafafa;
+  --color-sidebar-border: #1a1a1a;
+  --color-sidebar-ring: #d4d4d8;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  /* Tipografía mejorada */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+  
+  h1 {
+    @apply text-4xl lg:text-5xl;
+  }
+  
+  h2 {
+    @apply text-3xl lg:text-4xl;
+  }
+  
+  h3 {
+    @apply text-2xl lg:text-3xl;
+  }
+  
+  h4 {
+    @apply text-xl lg:text-2xl;
+  }
+  
+  h5 {
+    @apply text-lg lg:text-xl;
+  }
+  
+  h6 {
+    @apply text-base lg:text-lg;
+  }
+  
+  p {
+    @apply leading-7 text-foreground/90;
+  }
+  
+  /* Utilidades de texto */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Animaciones personalizadas */
+  @keyframes shimmer {
+    0% {
+      background-position: -1000px 0;
+    }
+    100% {
+      background-position: 1000px 0;
+    }
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 2s infinite linear;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 1000px 100%;
+  }
+}
+
+@layer utilities {
+  /* Ocultar scrollbar pero mantener funcionalidad */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Scrollbar personalizado */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-border/80;
+  }
+}

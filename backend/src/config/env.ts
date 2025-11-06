@@ -45,12 +45,17 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional().default(''),
   OCR_SERVICE_URL: z.string().url().optional().default('http://localhost:5000'),
 
-  // Email SMTP (opcionales)
+  // Email - Mailgun (recomendado)
+  MAILGUN_API_KEY: z.string().optional().default(''),
+  MAILGUN_DOMAIN: z.string().optional().default(''),
+  MAILGUN_FROM: z.string().optional().default(''),
+
+  // Email - SMTP tradicional (fallback)
   SMTP_HOST: z.string().default('smtp.gmail.com'),
   SMTP_PORT: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().positive()).default('587'),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASSWORD: z.string().optional().default(''),
-  SMTP_FROM: z.string().email().default('noreply@sigcerh.local'),
+  SMTP_FROM: z.string().optional().default('noreply@sigcerh.local'),
 
   // Storage
   UPLOAD_PATH: z.string().default('./uploads'),
@@ -130,13 +135,18 @@ export const config = {
 
   // Email
   email: {
+    mailgun: {
+      apiKey: env.MAILGUN_API_KEY,
+      domain: env.MAILGUN_DOMAIN,
+      from: env.MAILGUN_FROM,
+    },
     smtp: {
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
       user: env.SMTP_USER,
       password: env.SMTP_PASSWORD,
+      from: env.SMTP_FROM,
     },
-    from: env.SMTP_FROM,
   },
 
   // Storage

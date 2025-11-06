@@ -582,7 +582,7 @@ model sesion {
   usuario_id      String    @db.Uuid
   token           String    @unique @db.Text
   ip              String?   @db.VarChar(45)
-  useragent       String?
+  useragent       String?   @db.Text
   fechainicio     DateTime? @default(now()) @db.Timestamptz(6)
   fechaexpiracion DateTime  @db.Timestamptz(6)
   fechacierre     DateTime? @db.Timestamptz(6)

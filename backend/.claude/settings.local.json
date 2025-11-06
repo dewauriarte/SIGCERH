@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npm test:*)"
+    ]
+  },
+  "disabledMcpjsonServers": [
+    "netlify",
+    "stripe",
+    "supabase",
+    "sendgrid",
+    "twilio",
+    "gemini"
+  ]
+}

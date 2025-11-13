@@ -10,9 +10,32 @@
       "Bash(claude mcp list:*)",
       "WebFetch(domain:github.com)",
       "Bash(claude mcp add --help:*)",
-      "Bash(claude mcp add:*)"
+      "Bash(claude mcp add:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm install:*)",
+      "Bash(REPORTE_IMPLEMENTACION_SPRINT_04_PORTAL_PUBLICO.md)",
+      "Bash(find:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx vite:*)",
+      "Bash(npx tsc:*)",
+      "Bash(taskkill /F /FI \"WINDOWTITLE eq *npx vite --force*\" 2)",
+      "Bash(nul)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(cat:*)",
+      "Bash(ls -la \"C:\\SIGCERH\\PLANIFICACION\\02_FRONTEND\"\" | findstr \"SPRINT_05 \")"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "disabledMcpjsonServers": [
+    "netlify",
+    "stripe",
+    "supabase",
+    "sendgrid",
+    "twilio",
+    "gemini"
+  ]
 }

@@ -5,7 +5,10 @@
 
 import { Request, Response } from 'express';
 import { solicitudService } from './solicitud.service';
+import { constanciaService } from './constancia.service';
 import { logger } from '@config/logger';
+import path from 'path';
+import fs from 'fs';
 import {
   CreateSolicitudDTO,
   DerivarEditorDTO,
@@ -31,14 +34,27 @@ export class SolicitudController {
 
   /**
    * POST /api/solicitudes/crear
-   * Crear nueva solicitud (Usuario Público)
+   * Crear nueva solicitud desde portal público
+   * Crea automáticamente el estudiante y registros relacionados
    */
   async crear(req: Request, res: Response): Promise<void> {
     try {
+      logger.info('📥 Datos recibidos:', req.body);
+      
       const data = CreateSolicitudDTO.parse(req.body);
-      const usuarioId = (req as any).usuario?.id; // Opcional si está auth
+      
+      logger.info('✅ Datos validados correctamente', {
+        estudiante: data.estudiante.numeroDocumento,
+        nivel: data.datosAcademicos.nivel,
+      });
 
-      const solicitud = await solicitudService.create(data, usuarioId);
+      // Llamar al servicio para crear la solicitud (implementa lógica completa)
+      const solicitud = await solicitudService.createFromPublicPortal(data);
+
+      logger.info('✅ Solicitud creada exitosamente', { 
+        codigo: solicitud.numeroseguimiento,
+        id: solicitud.id 
+      });
 
       res.status(201).json({
         success: true,
@@ -46,13 +62,26 @@ export class SolicitudController {
         data: {
           id: solicitud.id,
           numeroExpediente: solicitud.numeroexpediente,
+          codigo: solicitud.numeroseguimiento,
           numeroseguimiento: solicitud.numeroseguimiento,
           estado: solicitud.estado,
           fechasolicitud: solicitud.fechasolicitud,
         },
       });
     } catch (error: any) {
-      logger.error('Error en crear solicitud:', error);
+      logger.error('❌ Error en crear solicitud:', error);
+      
+      // Si es error de validación de Zod, mostrar detalles
+      if (error.name === 'ZodError') {
+        logger.error('Errores de validación:', JSON.stringify(error.errors, null, 2));
+        res.status(400).json({
+          success: false,
+          message: 'Error de validación',
+          errors: error.errors,
+        });
+        return;
+      }
+      
       res.status(400).json({
         success: false,
         message: error.message || 'Error al crear solicitud',
@@ -61,13 +90,24 @@ export class SolicitudController {
   }
 
   /**
-   * GET /api/solicitudes/seguimiento/:codigo
+   * GET /api/solicitudes/seguimiento/:codigo?dni=12345678
    * Consultar estado de solicitud (Público)
    */
   async seguimiento(req: Request, res: Response): Promise<void> {
     try {
       const { codigo } = req.params;
-      const solicitud = await solicitudService.findByCodigo(codigo!);
+      const { dni } = req.query;
+
+      // Validar que se envíe el DNI
+      if (!dni || typeof dni !== 'string') {
+        res.status(400).json({
+          success: false,
+          message: 'Debe proporcionar el DNI del estudiante para validar la consulta',
+        });
+        return;
+      }
+
+      const solicitud = await solicitudService.findByCodigoYDni(codigo!, dni);
 
       res.status(200).json({
         success: true,
@@ -78,7 +118,7 @@ export class SolicitudController {
       logger.error('Error en seguimiento:', error);
       res.status(404).json({
         success: false,
-        message: error.message || 'Código de seguimiento no encontrado',
+        message: error.message || 'Código de seguimiento no encontrado o DNI incorrecto',
       });
     }
   }
@@ -119,13 +159,89 @@ export class SolicitudController {
   }
 
   /**
+   * GET /api/solicitudes/mesa-partes/estadisticas
+   * Obtener estadísticas para dashboard de Mesa de Partes
+   */
+  async estadisticasMesaPartes(req: Request, res: Response): Promise<void> {
+    try {
+      const estadisticas = await solicitudService.getEstadisticasMesaPartes();
+
+      res.status(200).json({
+        success: true,
+        message: 'Estadísticas de Mesa de Partes',
+        data: estadisticas,
+      });
+    } catch (error: any) {
+      logger.error('Error al obtener estadísticas:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/solicitudes/mesa-partes/solicitudes-semana
+   * Obtener solicitudes de la última semana agrupadas por día
+   */
+  async solicitudesUltimaSemana(req: Request, res: Response): Promise<void> {
+    try {
+      const datos = await solicitudService.getSolicitudesUltimaSemana();
+
+      res.status(200).json({
+        success: true,
+        message: 'Solicitudes de la última semana',
+        data: datos,
+      });
+    } catch (error: any) {
+      logger.error('Error al obtener solicitudes por semana:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/solicitudes/mesa-partes/actividad-reciente
+   * Obtener actividad reciente del sistema
+   */
+  async actividadReciente(req: Request, res: Response): Promise<void> {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const actividad = await solicitudService.getActividadReciente(limit);
+
+      res.status(200).json({
+        success: true,
+        message: 'Actividad reciente',
+        data: actividad,
+      });
+    } catch (error: any) {
+      logger.error('Error al obtener actividad reciente:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
    * POST /api/solicitudes/:id/mesa-partes/derivar-editor
    * Derivar solicitud a Editor
    */
   async derivarEditor(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const usuarioId = (req as any).usuario.id;
+      const usuarioId = (req as any).user?.id;
+      
+      if (!usuarioId) {
+        res.status(401).json({
+          success: false,
+          message: 'Usuario no autenticado',
+        });
+        return;
+      }
+      
       const { editorId, observaciones } = DerivarEditorDTO.parse(req.body);
 
       const solicitud = await solicitudService.derivarAEditor(
@@ -771,6 +887,64 @@ export class SolicitudController {
       res.status(400).json({
         success: false,
         message: error.message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/solicitudes/:id/constancia-entrega
+   * Descargar constancia de entrega de certificado
+   * Solo disponible para solicitudes en estado ENTREGADO
+   */
+  async descargarConstanciaEntrega(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      // Verificar que la solicitud existe y está entregada
+      const solicitud = await solicitudService.findById(id!);
+
+      if (solicitud.estado !== 'ENTREGADO') {
+        res.status(400).json({
+          success: false,
+          message: 'La solicitud no ha sido entregada aún. No se puede generar la constancia.',
+        });
+        return;
+      }
+
+      // Generar constancia
+      const constanciaPath = await constanciaService.generarConstanciaEntrega(id!);
+
+      // Construir ruta completa
+      const fullPath = path.join(process.cwd(), constanciaPath);
+
+      // Verificar que el archivo existe
+      if (!fs.existsSync(fullPath)) {
+        res.status(404).json({
+          success: false,
+          message: 'Error al generar la constancia',
+        });
+        return;
+      }
+
+      // Enviar archivo
+      res.download(
+        fullPath,
+        `Constancia_Entrega_${solicitud.numeroexpediente}.pdf`,
+        (err) => {
+          if (err) {
+            logger.error(`Error al descargar constancia: ${err.message}`);
+            res.status(500).json({
+              success: false,
+              message: 'Error al descargar constancia',
+            });
+          }
+        }
+      );
+    } catch (error: any) {
+      logger.error(`Error en descargar constancia: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Error al descargar constancia',
       });
     }
   }

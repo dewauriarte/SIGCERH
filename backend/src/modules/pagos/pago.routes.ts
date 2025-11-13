@@ -8,6 +8,7 @@ import { authenticate } from '@middleware/auth.middleware';
 import { requirePermission } from '@middleware/authorization.middleware';
 import { auditarAccion } from '@middleware/audit.middleware';
 import { pagoController } from './pago.controller';
+import { ticketController } from './ticket.controller';
 import { metodoPagoController } from './metodo-pago.controller';
 import { reporteController } from './reporte.controller';
 import {
@@ -101,22 +102,43 @@ router.get(
  */
 
 /**
+ * GET /api/pagos/estadisticas
+ * Obtener estadísticas de pagos
+ */
+router.get(
+  '/estadisticas',
+  requirePermission(['PAGOS_VER']),
+  pagoController.getEstadisticas.bind(pagoController)
+);
+
+/**
  * GET /api/pagos/pendientes-validacion
  * Listar pagos pendientes de validación
  */
 router.get(
   '/pendientes-validacion',
-  requirePermission(['PAGOS_VALIDAR', 'MESA_DE_PARTES']),
+  requirePermission(['PAGOS_VALIDAR']),
   pagoController.getPendientesValidacion.bind(pagoController)
 );
 
 /**
+ * POST /api/pagos/registrar-efectivo
+ * Crear y registrar pago en efectivo desde solicitud (sin pagoId previo)
+ */
+router.post(
+  '/registrar-efectivo',
+  requirePermission(['PAGOS_VALIDAR']),
+  auditarAccion('pago'),
+  pagoController.crearRegistrarEfectivo.bind(pagoController)
+);
+
+/**
  * POST /api/pagos/:id/registrar-efectivo
- * Registrar pago en efectivo
+ * Registrar pago en efectivo (requiere pagoId existente)
  */
 router.post(
   '/:id/registrar-efectivo',
-  requirePermission(['PAGOS_VALIDAR', 'MESA_DE_PARTES']),
+  requirePermission(['PAGOS_VALIDAR']),
   validate(RegistrarPagoEfectivoDTO),
   auditarAccion('pago', (req) => req.params.id!),
   pagoController.registrarEfectivo.bind(pagoController)
@@ -128,7 +150,7 @@ router.post(
  */
 router.post(
   '/:id/validar-manual',
-  requirePermission(['PAGOS_VALIDAR', 'MESA_DE_PARTES']),
+  requirePermission(['PAGOS_VALIDAR']),
   validate(ValidarPagoManualDTO),
   auditarAccion('pago', (req) => req.params.id!),
   pagoController.validarManual.bind(pagoController)
@@ -140,7 +162,7 @@ router.post(
  */
 router.post(
   '/:id/rechazar-comprobante',
-  requirePermission(['PAGOS_VALIDAR', 'MESA_DE_PARTES']),
+  requirePermission(['PAGOS_VALIDAR']),
   validate(RechazarComprobanteDTO),
   auditarAccion('pago', (req) => req.params.id!),
   pagoController.rechazarComprobante.bind(pagoController)
@@ -158,7 +180,7 @@ router.post(
  */
 router.get(
   '/',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   validateQuery(FiltrosPagoDTO),
   pagoController.listar.bind(pagoController)
 );
@@ -174,12 +196,32 @@ router.get(
 );
 
 /**
+ * GET /api/pagos/:id/ticket
+ * Descargar ticket de pago (PDF)
+ * Nota: Solo requiere autenticación, no permisos específicos
+ */
+router.get(
+  '/:id/ticket',
+  ticketController.descargarTicket.bind(ticketController)
+);
+
+/**
+ * GET /api/pagos/:id/recibo
+ * Descargar recibo de pago en efectivo (PDF)
+ */
+router.get(
+  '/:id/recibo',
+  requirePermission(['PAGOS_VER']),
+  ticketController.descargarRecibo.bind(ticketController)
+);
+
+/**
  * POST /api/pagos/marcar-expiradas
  * Marcar órdenes expiradas (tarea programada)
  */
 router.post(
   '/marcar-expiradas',
-  requirePermission(['ADMIN']),
+  requirePermission(['PAGOS_EDITAR']),
   pagoController.marcarExpiradas.bind(pagoController)
 );
 
@@ -195,7 +237,7 @@ router.post(
  */
 router.post(
   '/metodos/seed',
-  requirePermission(['ADMIN']),
+  requirePermission(['PAGOS_EDITAR']),
   metodoPagoController.seed.bind(metodoPagoController)
 );
 
@@ -205,7 +247,7 @@ router.post(
  */
 router.get(
   '/metodos',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   metodoPagoController.listar.bind(metodoPagoController)
 );
 
@@ -215,7 +257,7 @@ router.get(
  */
 router.get(
   '/metodos/:id',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   metodoPagoController.obtenerPorId.bind(metodoPagoController)
 );
 
@@ -225,7 +267,7 @@ router.get(
  */
 router.post(
   '/metodos',
-  requirePermission(['PAGOS_EDITAR', 'ADMIN']),
+  requirePermission(['PAGOS_EDITAR']),
   validate(CreateMetodoPagoDTO),
   auditarAccion('metodopago'),
   metodoPagoController.crear.bind(metodoPagoController)
@@ -237,7 +279,7 @@ router.post(
  */
 router.put(
   '/metodos/:id',
-  requirePermission(['PAGOS_EDITAR', 'ADMIN']),
+  requirePermission(['PAGOS_EDITAR']),
   validate(UpdateMetodoPagoDTO),
   auditarAccion('metodopago', (req) => req.params.id!),
   metodoPagoController.actualizar.bind(metodoPagoController)
@@ -249,7 +291,7 @@ router.put(
  */
 router.patch(
   '/metodos/:id/toggle',
-  requirePermission(['PAGOS_EDITAR', 'ADMIN']),
+  requirePermission(['PAGOS_EDITAR']),
   auditarAccion('metodopago', (req) => req.params.id!),
   metodoPagoController.toggle.bind(metodoPagoController)
 );
@@ -260,7 +302,7 @@ router.patch(
  */
 router.delete(
   '/metodos/:id',
-  requirePermission(['PAGOS_EDITAR', 'ADMIN']),
+  requirePermission(['PAGOS_EDITAR']),
   auditarAccion('metodopago', (req) => req.params.id!),
   metodoPagoController.eliminar.bind(metodoPagoController)
 );
@@ -277,7 +319,7 @@ router.delete(
  */
 router.get(
   '/reportes/periodo',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   reporteController.reportePorPeriodo.bind(reporteController)
 );
 
@@ -287,7 +329,7 @@ router.get(
  */
 router.get(
   '/reportes/metodo',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   reporteController.reportePorMetodo.bind(reporteController)
 );
 
@@ -297,7 +339,7 @@ router.get(
  */
 router.get(
   '/reportes/pendientes',
-  requirePermission(['PAGOS_VER', 'MESA_DE_PARTES', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   reporteController.reportePendientes.bind(reporteController)
 );
 
@@ -307,7 +349,7 @@ router.get(
  */
 router.get(
   '/reportes/noconciliados',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   reporteController.reporteNoConciliados.bind(reporteController)
 );
 
@@ -317,7 +359,7 @@ router.get(
  */
 router.get(
   '/reportes/exportar',
-  requirePermission(['PAGOS_VER', 'ADMIN']),
+  requirePermission(['PAGOS_VER']),
   reporteController.exportarExcel.bind(reporteController)
 );
 

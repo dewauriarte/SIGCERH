@@ -149,20 +149,24 @@ export const useAuth = () => {
           setUser(response.data);
         }
         return response;
-      } catch (error) {
-        // Si la sesión falló, hacer logout
-        logoutStore();
-        navigate('/login');
-        toast.error('Sesión expirada', {
-          description: 'Por favor, inicia sesión nuevamente',
-        });
+      } catch (error: any) {
+        // Si la sesión falló (401, 403), hacer logout silencioso
+        if (error?.response?.status === 401 || error?.response?.status === 403) {
+          logoutStore();
+          queryClient.clear();
+          navigate('/login', { replace: true });
+          toast.error('Sesión expirada', {
+            description: 'Por favor, inicia sesión nuevamente',
+          });
+        }
         throw error;
       }
     },
     enabled: isAuthenticated && !!token, // Solo si está autenticado
-    refetchInterval: 30000, // Cada 30 segundos
+    refetchInterval: 5 * 60 * 1000, // Cada 5 minutos (reducido para evitar rate limit)
     refetchIntervalInBackground: false, // No refrescar en background
     retry: false, // No reintentar si falla
+    staleTime: 4 * 60 * 1000, // Considerar datos frescos por 4 minutos
   });
 
   // ==================== HELPERS ====================

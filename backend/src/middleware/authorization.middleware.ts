@@ -60,10 +60,11 @@ export const requirePermission = (permisosRequeridos: string[]) => {
       }
 
       const permisosUsuario = req.user.permisos || [];
+      
       const tienePermiso = permisosRequeridos.some(permiso => permisosUsuario.includes(permiso));
 
       if (!tienePermiso) {
-        logger.warn(`Usuario ${req.user.username} intentó acceder sin permiso requerido. Permisos necesarios: ${permisosRequeridos.join(', ')}`);
+        logger.warn(`Usuario ${req.user.username} intentó acceder sin permiso requerido. Permisos necesarios: ${permisosRequeridos.join(', ')}, Permisos del usuario: ${permisosUsuario.join(', ')}`);
         res.status(403).json({
           success: false,
           message: 'No tienes los permisos necesarios para esta acción',

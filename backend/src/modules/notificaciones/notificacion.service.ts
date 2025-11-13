@@ -360,6 +360,210 @@ export class NotificacionService {
       },
     };
   }
+
+  /**
+   * Obtener notificaciones por usuario y rol
+   * Las notificaciones se filtran según el rol del usuario en Mesa de Partes
+   */
+  async findByUsuarioRol(
+    usuarioId: string,
+    roles: string[],
+    pagination: { page: number; limit: number },
+    soloNoLeidas: boolean = false
+  ) {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    // Determinar tipos de notificaciones según rol
+    const tiposNotificacion: string[] = [];
+    
+    if (roles.includes('MESA_DE_PARTES')) {
+      tiposNotificacion.push(
+        'SOLICITUD_RECIBIDA',
+        'PAGO_RECIBIDO',
+        'CERTIFICADO_LISTO'
+      );
+    }
+
+    if (roles.includes('EDITOR')) {
+      tiposNotificacion.push(
+        'SOLICITUD_DERIVADA',
+        'ACTA_ENCONTRADA',
+        'ACTA_NO_ENCONTRADA'
+      );
+    }
+
+    if (roles.includes('UGEL')) {
+      tiposNotificacion.push(
+        'CERTIFICADO_PENDIENTE_VALIDACION',
+        'CERTIFICADO_OBSERVADO'
+      );
+    }
+
+    // Si no hay roles definidos, retornar vacío
+    if (tiposNotificacion.length === 0) {
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          page,
+          limit,
+          totalPages: 0,
+        },
+      };
+    }
+
+    const where: any = {
+      tipo: { in: tiposNotificacion },
+    };
+
+    if (soloNoLeidas) {
+      where.fechaleido = null;
+    }
+
+    const [total, data] = await Promise.all([
+      prisma.notificacion.count({ where }),
+      prisma.notificacion.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          fechacreacion: 'desc',
+        },
+        include: {
+          solicitud: {
+            select: {
+              numeroexpediente: true,
+              estudiante: {
+                select: {
+                  nombres: true,
+                  apellidopaterno: true,
+                  apellidomaterno: true,
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Marcar notificación como leída
+   */
+  async marcarLeida(id: string, usuarioId: string) {
+    const notificacion = await prisma.notificacion.update({
+      where: { id },
+      data: {
+        fechaleido: new Date(),
+      },
+    });
+
+    logger.info(`Notificación ${id} marcada como leída por usuario ${usuarioId}`);
+
+    return notificacion;
+  }
+
+  /**
+   * Marcar todas las notificaciones de un rol como leídas
+   */
+  async marcarTodasLeidasPorRol(usuarioId: string, roles: string[]): Promise<number> {
+    const tiposNotificacion: string[] = [];
+    
+    if (roles.includes('MESA_DE_PARTES')) {
+      tiposNotificacion.push(
+        'SOLICITUD_RECIBIDA',
+        'PAGO_RECIBIDO',
+        'CERTIFICADO_LISTO'
+      );
+    }
+
+    if (roles.includes('EDITOR')) {
+      tiposNotificacion.push(
+        'SOLICITUD_DERIVADA',
+        'ACTA_ENCONTRADA',
+        'ACTA_NO_ENCONTRADA'
+      );
+    }
+
+    if (roles.includes('UGEL')) {
+      tiposNotificacion.push(
+        'CERTIFICADO_PENDIENTE_VALIDACION',
+        'CERTIFICADO_OBSERVADO'
+      );
+    }
+
+    if (tiposNotificacion.length === 0) {
+      return 0;
+    }
+
+    const result = await prisma.notificacion.updateMany({
+      where: {
+        tipo: { in: tiposNotificacion },
+        fechaleido: null,
+      },
+      data: {
+        fechaleido: new Date(),
+      },
+    });
+
+    logger.info(`${result.count} notificaciones marcadas como leídas para usuario ${usuarioId}`);
+
+    return result.count;
+  }
+
+  /**
+   * Contar notificaciones no leídas por rol
+   */
+  async contarNoLeidasPorRol(usuarioId: string, roles: string[]): Promise<number> {
+    const tiposNotificacion: string[] = [];
+    
+    if (roles.includes('MESA_DE_PARTES')) {
+      tiposNotificacion.push(
+        'SOLICITUD_RECIBIDA',
+        'PAGO_RECIBIDO',
+        'CERTIFICADO_LISTO'
+      );
+    }
+
+    if (roles.includes('EDITOR')) {
+      tiposNotificacion.push(
+        'SOLICITUD_DERIVADA',
+        'ACTA_ENCONTRADA',
+        'ACTA_NO_ENCONTRADA'
+      );
+    }
+
+    if (roles.includes('UGEL')) {
+      tiposNotificacion.push(
+        'CERTIFICADO_PENDIENTE_VALIDACION',
+        'CERTIFICADO_OBSERVADO'
+      );
+    }
+
+    if (tiposNotificacion.length === 0) {
+      return 0;
+    }
+
+    const count = await prisma.notificacion.count({
+      where: {
+        tipo: { in: tiposNotificacion },
+        fechaleido: null,
+      },
+    });
+
+    return count;
+  }
 }
 
 export const notificacionService = new NotificacionService();

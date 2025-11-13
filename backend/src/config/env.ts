@@ -43,7 +43,9 @@ const envSchema = z.object({
 
   // OCR (opcionales por ahora)
   GEMINI_API_KEY: z.string().optional().default(''),
+  GEMINI_MODEL: z.string().optional().default('gemini-2.5-pro'),
   OCR_SERVICE_URL: z.string().url().optional().default('http://localhost:5000'),
+  USE_REAL_OCR: z.string().transform((val) => val === 'true').default('false'),
 
   // Email - Mailgun (recomendado)
   MAILGUN_API_KEY: z.string().optional().default(''),
@@ -130,7 +132,9 @@ export const config = {
   // OCR
   ocr: {
     geminiApiKey: env.GEMINI_API_KEY,
+    geminiModel: env.GEMINI_MODEL,
     serviceUrl: env.OCR_SERVICE_URL,
+    useReal: env.USE_REAL_OCR,
   },
 
   // Email

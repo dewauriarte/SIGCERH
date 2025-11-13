@@ -1,436 +1,238 @@
 /**
- * Servicio de estudiantes
+ * Servicio de Estudiantes
+ * CRUD completo + validación DNI único
  */
 
 import { PrismaClient } from '@prisma/client';
 import { logger } from '@config/logger';
-import { CreateEstudianteData, UpdateEstudianteData, SearchEstudianteOptions } from './types';
+import { CreateEstudianteDTOType, FiltrosEstudianteDTOType, UpdateEstudianteDTOType } from './dtos';
 
 const prisma = new PrismaClient();
 
 export class EstudiantesService {
   /**
-   * Listar estudiantes con paginación y filtros
+   * Crear nuevo estudiante
    */
-  async list(options: { page?: number; limit?: number; activo?: boolean } = {}) {
-    const {
-      page = 1,
-      limit = 10,
-      activo,
-    } = options;
-
-    const skip = (page - 1) * limit;
-
-    // Construir filtros
-    const where: any = {};
-
-    if (activo !== undefined) {
-      where.estado = activo ? 'ACTIVO' : 'INACTIVO';
-    }
-
-    // Obtener institución activa
-    const institucion = await prisma.configuracioninstitucion.findFirst({
-      where: { activo: true },
-    });
-
-    if (institucion) {
-      where.institucion_id = institucion.id;
-    }
-
-    // Contar total
-    const total = await prisma.estudiante.count({ where });
-
-    // Obtener estudiantes
-    const estudiantes = await prisma.estudiante.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: {
-        apellidopaterno: 'asc',
-      },
-    });
-
-    return {
-      items: estudiantes.map(e => ({
-        id: e.id,
-        dni: e.dni,
-        nombres: e.nombres,
-        apellidoPaterno: e.apellidopaterno,
-        apellidoMaterno: e.apellidomaterno,
-        fechaNacimiento: e.fechanacimiento,
-        lugarNacimiento: e.lugarnacimiento,
-        sexo: e.sexo,
-        direccion: e.direccion,
-        telefono: e.telefono,
-        email: e.email,
-        estado: e.estado,
-        fechaRegistro: e.fecharegistro,
-      })),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  /**
-   * Obtener un estudiante por ID
-   */
-  async getById(id: string) {
-    const estudiante = await prisma.estudiante.findUnique({
-      where: { id },
-    });
-
-    if (!estudiante) {
-      throw new Error('Estudiante no encontrado');
-    }
-
-    return {
-      id: estudiante.id,
-      dni: estudiante.dni,
-      nombres: estudiante.nombres,
-      apellidoPaterno: estudiante.apellidopaterno,
-      apellidoMaterno: estudiante.apellidomaterno,
-      fechaNacimiento: estudiante.fechanacimiento,
-      lugarNacimiento: estudiante.lugarnacimiento,
-      sexo: estudiante.sexo,
-      direccion: estudiante.direccion,
-      telefono: estudiante.telefono,
-      email: estudiante.email,
-      estado: estudiante.estado,
-      fechaRegistro: estudiante.fecharegistro,
-    };
-  }
-
-  /**
-   * Crear un nuevo estudiante
-   */
-  async create(data: CreateEstudianteData) {
-    // Obtener institución activa
-    const institucion = await prisma.configuracioninstitucion.findFirst({
-      where: { activo: true },
-    });
-
-    if (!institucion) {
-      throw new Error('No se encontró institución activa');
-    }
-
-    // Verificar si ya existe un estudiante con el mismo DNI
-    const existingEstudiante = await prisma.estudiante.findFirst({
+  async create(data: CreateEstudianteDTOType) {
+    // Validar DNI único por institución
+    const existente = await prisma.estudiante.findFirst({
       where: {
-        institucion_id: institucion.id,
         dni: data.dni,
       },
     });
 
-    if (existingEstudiante) {
+    if (existente) {
       throw new Error(`Ya existe un estudiante con el DNI ${data.dni}`);
-    }
-
-    // Validar que la fecha de nacimiento esté presente
-    if (!data.fechaNacimiento) {
-      throw new Error('La fecha de nacimiento es requerida');
     }
 
     const estudiante = await prisma.estudiante.create({
       data: {
-        institucion_id: institucion.id,
         dni: data.dni,
         nombres: data.nombres,
         apellidopaterno: data.apellidoPaterno,
         apellidomaterno: data.apellidoMaterno,
-        fechanacimiento: new Date(data.fechaNacimiento),
-        lugarnacimiento: data.lugarNacimiento || null,
-        sexo: data.sexo || null,
-        direccion: data.direccion || null,
-        telefono: data.telefono || null,
-        email: data.email || null,
-        estado: 'ACTIVO',
+        fechanacimiento: data.fechaNacimiento,
+        lugarnacimiento: data.lugarNacimiento,
+        sexo: data.sexo,
+        email: data.email,
+        telefono: data.telefono,
+        direccion: data.direccion,
+        observaciones: data.observaciones,
+        estado: data.estado,
       },
     });
 
-    logger.info(`Estudiante creado: ${estudiante.nombres} ${estudiante.apellidopaterno} (DNI: ${estudiante.dni})`);
+    logger.info(`Estudiante creado: ${estudiante.dni} - ${estudiante.nombrecompleto}`);
+    return estudiante;
+  }
+
+  /**
+   * Obtener estudiantes con filtros y paginación
+   */
+  async findAll(filtros: FiltrosEstudianteDTOType = {}, pagination?: { page: number; limit: number }) {
+    const where: any = {};
+
+    // Filtro de búsqueda (DNI o nombre)
+    if (filtros.search) {
+      where.OR = [
+        { dni: { contains: filtros.search } },
+        { nombrecompleto: { contains: filtros.search, mode: 'insensitive' } },
+        { nombres: { contains: filtros.search, mode: 'insensitive' } },
+        { apellidopaterno: { contains: filtros.search, mode: 'insensitive' } },
+        { apellidomaterno: { contains: filtros.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (filtros.estado) {
+      where.estado = filtros.estado;
+    }
+
+    if (filtros.sexo) {
+      where.sexo = filtros.sexo;
+    }
+
+    // Paginación
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [estudiantes, total] = await Promise.all([
+      prisma.estudiante.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          fecharegistro: 'desc',
+        },
+      }),
+      prisma.estudiante.count({ where }),
+    ]);
 
     return {
-      id: estudiante.id,
-      dni: estudiante.dni,
-      nombres: estudiante.nombres,
-      apellidoPaterno: estudiante.apellidopaterno,
-      apellidoMaterno: estudiante.apellidomaterno,
-      fechaNacimiento: estudiante.fechanacimiento,
-      lugarNacimiento: estudiante.lugarnacimiento,
-      sexo: estudiante.sexo,
-      direccion: estudiante.direccion,
-      telefono: estudiante.telefono,
-      email: estudiante.email,
-      estado: estudiante.estado,
-      fechaRegistro: estudiante.fecharegistro,
+      estudiantes,
+      pagination: pagination
+        ? {
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+          }
+        : undefined,
     };
   }
 
   /**
-   * Actualizar un estudiante
+   * Obtener estudiante por ID
    */
-  async update(id: string, data: UpdateEstudianteData) {
+  async findById(id: string) {
     const estudiante = await prisma.estudiante.findUnique({
       where: { id },
+      include: {
+        certificado: {
+          select: {
+            id: true,
+            codigovirtual: true,
+            numero: true,
+            fechaemision: true,
+            estado: true,
+          },
+        },
+        solicitud: {
+          select: {
+            id: true,
+            numeroexpediente: true,
+            estado: true,
+            fechasolicitud: true,
+          },
+        },
+      },
     });
 
     if (!estudiante) {
       throw new Error('Estudiante no encontrado');
     }
 
-    // Si se cambia el DNI, verificar duplicados
+    return estudiante;
+  }
+
+  /**
+   * Actualizar estudiante
+   */
+  async update(id: string, data: UpdateEstudianteDTOType) {
+    const estudiante = await this.findById(id);
+
+    // Validar DNI único si se está cambiando
     if (data.dni && data.dni !== estudiante.dni) {
-      const existingEstudiante = await prisma.estudiante.findFirst({
+      const existente = await prisma.estudiante.findFirst({
         where: {
-          institucion_id: estudiante.institucion_id,
           dni: data.dni,
           id: { not: id },
         },
       });
 
-      if (existingEstudiante) {
-        throw new Error(`Ya existe otro estudiante con el DNI ${data.dni}`);
+      if (existente) {
+        throw new Error(`Ya existe un estudiante con el DNI ${data.dni}`);
       }
     }
 
-    // Preparar datos para actualizar
-    const updateData: any = {};
-
-    if (data.dni) updateData.dni = data.dni;
-    if (data.nombres) updateData.nombres = data.nombres;
-    if (data.apellidoPaterno) updateData.apellidopaterno = data.apellidoPaterno;
-    if (data.apellidoMaterno) updateData.apellidomaterno = data.apellidoMaterno;
-    if (data.fechaNacimiento) updateData.fechanacimiento = data.fechaNacimiento;
-    if (data.lugarNacimiento) updateData.lugarnacimiento = data.lugarNacimiento;
-    if (data.sexo) updateData.sexo = data.sexo;
-    if (data.direccion) updateData.direccion = data.direccion;
-    if (data.telefono) updateData.telefono = data.telefono;
-    if (data.email) updateData.email = data.email;
-    if (data.activo !== undefined) updateData.estado = data.activo ? 'ACTIVO' : 'INACTIVO';
-
-    const updated = await prisma.estudiante.update({
+    const estudianteActualizado = await prisma.estudiante.update({
       where: { id },
-      data: updateData,
+      data: {
+        dni: data.dni,
+        nombres: data.nombres,
+        apellidopaterno: data.apellidoPaterno,
+        apellidomaterno: data.apellidoMaterno,
+        fechanacimiento: data.fechaNacimiento,
+        lugarnacimiento: data.lugarNacimiento,
+        sexo: data.sexo,
+        email: data.email,
+        telefono: data.telefono,
+        direccion: data.direccion,
+        observaciones: data.observaciones,
+        estado: data.estado,
+        fechaactualizacion: new Date(),
+      },
     });
 
-    logger.info(`Estudiante actualizado: ${updated.nombres} ${updated.apellidopaterno} (DNI: ${updated.dni})`);
-
-    return {
-      id: updated.id,
-      dni: updated.dni,
-      nombres: updated.nombres,
-      apellidoPaterno: updated.apellidopaterno,
-      apellidoMaterno: updated.apellidomaterno,
-      fechaNacimiento: updated.fechanacimiento,
-      lugarNacimiento: updated.lugarnacimiento,
-      sexo: updated.sexo,
-      direccion: updated.direccion,
-      telefono: updated.telefono,
-      email: updated.email,
-      estado: updated.estado,
-      fechaRegistro: updated.fecharegistro,
-    };
+    logger.info(`Estudiante actualizado: ${estudianteActualizado.dni}`);
+    return estudianteActualizado;
   }
 
   /**
-   * Eliminar un estudiante (soft delete)
+   * Eliminar estudiante (soft delete - cambiar a INACTIVO)
    */
   async delete(id: string) {
+    // Verificar si tiene certificados o solicitudes
     const estudiante = await prisma.estudiante.findUnique({
       where: { id },
+      include: {
+        _count: {
+          select: {
+            certificado: true,
+            solicitud: true,
+          },
+        },
+      },
     });
 
     if (!estudiante) {
       throw new Error('Estudiante no encontrado');
     }
 
-    await prisma.estudiante.update({
-      where: { id },
-      data: { estado: 'INACTIVO' },
-    });
-
-    logger.info(`Estudiante desactivado: ${estudiante.nombres} ${estudiante.apellidopaterno} (DNI: ${estudiante.dni})`);
-  }
-
-  /**
-   * Búsqueda avanzada de estudiantes
-   */
-  async search(options: SearchEstudianteOptions) {
-    const {
-      dni,
-      nombre,
-      page = 1,
-      limit = 10,
-    } = options;
-
-    const skip = (page - 1) * limit;
-
-    // Obtener institución activa
-    const institucion = await prisma.configuracioninstitucion.findFirst({
-      where: { activo: true },
-    });
-
-    // Construir filtros
-    const where: any = {
-      activo: true,
-    };
-
-    if (institucion) {
-      where.institucion_id = institucion.id;
-    }
-
-    if (dni) {
-      where.dni = { contains: dni };
-    }
-
-    if (nombre) {
-      where.OR = [
-        { nombres: { contains: nombre, mode: 'insensitive' } },
-        { apellidopaterno: { contains: nombre, mode: 'insensitive' } },
-        { apellidomaterno: { contains: nombre, mode: 'insensitive' } },
-      ];
-    }
-
-    // Contar total
-    const total = await prisma.estudiante.count({ where });
-
-    // Obtener estudiantes
-    const estudiantes = await prisma.estudiante.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: [
-        { apellidopaterno: 'asc' },
-        { apellidomaterno: 'asc' },
-        { nombres: 'asc' },
-      ],
-    });
-
-    return {
-      items: estudiantes.map(e => ({
-        id: e.id,
-        dni: e.dni,
-        nombres: e.nombres,
-        apellidoPaterno: e.apellidopaterno,
-        apellidoMaterno: e.apellidomaterno,
-        nombreCompleto: `${e.apellidopaterno} ${e.apellidomaterno}, ${e.nombres}`,
-        fechaNacimiento: e.fechanacimiento,
-        sexo: e.sexo,
-        estado: e.estado,
-      })),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  /**
-   * Importar estudiantes desde archivo CSV
-   */
-  async importFromCSV(buffer: Buffer) {
-    const { parseEstudiantesCSV } = await import('@shared/utils/csv-parser');
-    
-    // Parsear CSV
-    const { data: csvData, errors: parseErrors } = parseEstudiantesCSV(buffer);
-
-    const results = {
-      total: csvData.length,
-      exitosos: 0,
-      errores: [] as Array<{ fila: number; dni: string; error: string }>,
-      duplicados: [] as Array<{ fila: number; dni: string }>,
-    };
-
-    // Obtener institución activa
-    const institucion = await prisma.configuracioninstitucion.findFirst({
-      where: { activo: true },
-    });
-
-    if (!institucion) {
-      throw new Error('No se encontró institución activa');
-    }
-
-    // Agregar errores de parseo
-    parseErrors.forEach((err) => {
-      results.errores.push({
-        fila: err.row,
-        dni: err.data?.DNI || 'N/A',
-        error: err.message,
+    if (estudiante._count.certificado > 0 || estudiante._count.solicitud > 0) {
+      // Soft delete si tiene registros asociados
+      await prisma.estudiante.update({
+        where: { id },
+        data: {
+          estado: 'INACTIVO',
+          fechaactualizacion: new Date(),
+        },
       });
+      logger.info(`Estudiante desactivado (soft delete): ${estudiante.dni}`);
+    } else {
+      // Hard delete si no tiene registros asociados
+      await prisma.estudiante.delete({
+        where: { id },
+      });
+      logger.info(`Estudiante eliminado (hard delete): ${estudiante.dni}`);
+    }
+  }
+
+  /**
+   * Obtener estudiantes activos
+   */
+  async getActivos() {
+    const estudiantes = await prisma.estudiante.findMany({
+      where: {
+        estado: 'ACTIVO',
+      },
+      orderBy: {
+        nombrecompleto: 'asc',
+      },
     });
 
-    // Procesar cada estudiante válido
-    for (let i = 0; i < csvData.length; i++) {
-      const row = csvData[i];
-      const filaNumero = i + 2; // +2 porque empezamos en 1 y la primera es header
-
-      // Verificar que row no sea undefined
-      if (!row) {
-        continue;
-      }
-
-      try {
-        // Validar datos requeridos
-        if (!row.FechaNacimiento) {
-          throw new Error('Fecha de nacimiento requerida');
-        }
-
-        // Verificar si ya existe
-        const existingEstudiante = await prisma.estudiante.findFirst({
-          where: {
-            institucion_id: institucion.id,
-            dni: row.DNI,
-          },
-        });
-
-        if (existingEstudiante) {
-          results.duplicados.push({
-            fila: filaNumero,
-            dni: row.DNI,
-          });
-          continue;
-        }
-
-        // Crear estudiante
-        await prisma.estudiante.create({
-          data: {
-            institucion_id: institucion.id,
-            dni: row.DNI,
-            nombres: row.Nombres,
-            apellidopaterno: row.ApellidoPaterno,
-            apellidomaterno: row.ApellidoMaterno,
-            fechanacimiento: new Date(row.FechaNacimiento),
-            lugarnacimiento: row.LugarNacimiento || null,
-            sexo: row.Sexo || null,
-            direccion: row.Direccion || null,
-            telefono: row.Telefono || null,
-            email: row.Email || null,
-            estado: 'ACTIVO',
-          },
-        });
-
-        results.exitosos++;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Error desconocido';
-        results.errores.push({
-          fila: filaNumero,
-          dni: row.DNI,
-          error: message,
-        });
-      }
-    }
-
-    logger.info(`Importación CSV completada: ${results.exitosos}/${results.total} exitosos`);
-
-    return results;
+    return estudiantes;
   }
 }
 
 export const estudiantesService = new EstudiantesService();
-

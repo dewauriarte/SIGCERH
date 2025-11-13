@@ -73,8 +73,41 @@ router.use(authenticate);
  */
 router.get(
   '/mesa-partes/pendientes-derivacion',
-  requirePermission(['SOLICITUDES_VER', 'MESA_DE_PARTES']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.pendientesDerivacion.bind(solicitudController)
+);
+
+/**
+ * GET /api/solicitudes/mesa-partes/estadisticas
+ * Estadísticas para dashboard de Mesa de Partes
+ * Permiso: MESA_DE_PARTES
+ */
+router.get(
+  '/mesa-partes/estadisticas',
+  requirePermission(['SOLICITUDES_VER']),
+  solicitudController.estadisticasMesaPartes.bind(solicitudController)
+);
+
+/**
+ * GET /api/solicitudes/mesa-partes/solicitudes-semana
+ * Solicitudes de la última semana agrupadas por día
+ * Permiso: MESA_DE_PARTES
+ */
+router.get(
+  '/mesa-partes/solicitudes-semana',
+  requirePermission(['SOLICITUDES_VER']),
+  solicitudController.solicitudesUltimaSemana.bind(solicitudController)
+);
+
+/**
+ * GET /api/solicitudes/mesa-partes/actividad-reciente
+ * Actividad reciente del sistema
+ * Permiso: MESA_DE_PARTES
+ */
+router.get(
+  '/mesa-partes/actividad-reciente',
+  requirePermission(['SOLICITUDES_VER']),
+  solicitudController.actividadReciente.bind(solicitudController)
 );
 
 /**
@@ -84,7 +117,7 @@ router.get(
  */
 router.post(
   '/:id/mesa-partes/derivar-editor',
-  requirePermission(['SOLICITUDES_DERIVAR', 'MESA_DE_PARTES']),
+  requirePermission(['SOLICITUDES_DERIVAR']),
   validate(DerivarEditorDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.derivarEditor.bind(solicitudController)
@@ -97,7 +130,7 @@ router.post(
  */
 router.post(
   '/:id/mesa-partes/validar-pago-efectivo',
-  requirePermission(['SOLICITUDES_VALIDAR_PAGO', 'MESA_DE_PARTES']),
+  requirePermission(['SOLICITUDES_VALIDAR_PAGO']),
   validate(ValidarPagoDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.validarPagoEfectivo.bind(solicitudController)
@@ -110,7 +143,7 @@ router.post(
  */
 router.get(
   '/mesa-partes/listas-entrega',
-  requirePermission(['SOLICITUDES_VER', 'MESA_DE_PARTES']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.listasEntrega.bind(solicitudController)
 );
 
@@ -121,7 +154,7 @@ router.get(
  */
 router.post(
   '/:id/mesa-partes/marcar-entregado',
-  requirePermission(['SOLICITUDES_ENTREGAR', 'MESA_DE_PARTES']),
+  requirePermission(['SOLICITUDES_ENTREGAR']),
   validate(MarcarEntregadoDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.marcarEntregado.bind(solicitudController)
@@ -140,7 +173,7 @@ router.post(
  */
 router.get(
   '/editor/asignadas-busqueda',
-  requirePermission(['SOLICITUDES_VER', 'EDITOR']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.asignadasBusqueda.bind(solicitudController)
 );
 
@@ -151,7 +184,7 @@ router.get(
  */
 router.post(
   '/:id/editor/iniciar-busqueda',
-  requirePermission(['SOLICITUDES_BUSCAR', 'EDITOR']),
+  requirePermission(['SOLICITUDES_BUSCAR']),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.iniciarBusqueda.bind(solicitudController)
 );
@@ -163,7 +196,7 @@ router.post(
  */
 router.post(
   '/:id/editor/acta-encontrada',
-  requirePermission(['SOLICITUDES_GESTIONAR', 'EDITOR']),
+  requirePermission(['SOLICITUDES_GESTIONAR']),
   validate(ActaEncontradaDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.actaEncontrada.bind(solicitudController)
@@ -176,7 +209,7 @@ router.post(
  */
 router.post(
   '/:id/editor/acta-no-encontrada',
-  requirePermission(['SOLICITUDES_GESTIONAR', 'EDITOR']),
+  requirePermission(['SOLICITUDES_GESTIONAR']),
   validate(ActaNoEncontradaDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.actaNoEncontrada.bind(solicitudController)
@@ -189,7 +222,7 @@ router.post(
  */
 router.post(
   '/:id/editor/iniciar-procesamiento',
-  requirePermission(['SOLICITUDES_PROCESAR', 'EDITOR']),
+  requirePermission(['SOLICITUDES_PROCESAR']),
   validate(IniciarProcesamientoDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.iniciarProcesamiento.bind(solicitudController)
@@ -202,7 +235,7 @@ router.post(
  */
 router.post(
   '/:id/editor/enviar-validacion-ugel',
-  requirePermission(['SOLICITUDES_GESTIONAR', 'EDITOR']),
+  requirePermission(['SOLICITUDES_GESTIONAR']),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.enviarValidacionUGEL.bind(solicitudController)
 );
@@ -214,7 +247,7 @@ router.post(
  */
 router.post(
   '/:id/editor/corregir-observacion',
-  requirePermission(['SOLICITUDES_GESTIONAR', 'EDITOR']),
+  requirePermission(['SOLICITUDES_GESTIONAR']),
   validate(CorregirObservacionDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.corregirObservacion.bind(solicitudController)
@@ -233,7 +266,7 @@ router.post(
  */
 router.get(
   '/ugel/pendientes-validacion',
-  requirePermission(['SOLICITUDES_VER', 'UGEL']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.pendientesValidacionUGEL.bind(solicitudController)
 );
 
@@ -244,7 +277,7 @@ router.get(
  */
 router.post(
   '/:id/ugel/aprobar',
-  requirePermission(['SOLICITUDES_VALIDAR', 'UGEL']),
+  requirePermission(['SOLICITUDES_VALIDAR']),
   validate(AprobarUGELDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.aprobarUGEL.bind(solicitudController)
@@ -257,7 +290,7 @@ router.post(
  */
 router.post(
   '/:id/ugel/observar',
-  requirePermission(['SOLICITUDES_VALIDAR', 'UGEL']),
+  requirePermission(['SOLICITUDES_VALIDAR']),
   validate(ObservarUGELDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.observarUGEL.bind(solicitudController)
@@ -276,7 +309,7 @@ router.post(
  */
 router.get(
   '/siagec/pendientes-registro',
-  requirePermission(['SOLICITUDES_VER', 'SIAGEC']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.pendientesRegistroSIAGEC.bind(solicitudController)
 );
 
@@ -287,7 +320,7 @@ router.get(
  */
 router.post(
   '/:id/siagec/registrar',
-  requirePermission(['SOLICITUDES_REGISTRAR', 'SIAGEC']),
+  requirePermission(['SOLICITUDES_REGISTRAR']),
   validate(RegistrarSIAGECDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.registrarSIAGEC.bind(solicitudController)
@@ -306,7 +339,7 @@ router.post(
  */
 router.get(
   '/direccion/pendientes-firma',
-  requirePermission(['SOLICITUDES_VER', 'DIRECCION']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.pendientesFirma.bind(solicitudController)
 );
 
@@ -317,7 +350,7 @@ router.get(
  */
 router.post(
   '/:id/direccion/firmar',
-  requirePermission(['SOLICITUDES_FIRMAR', 'DIRECCION']),
+  requirePermission(['SOLICITUDES_FIRMAR']),
   validate(FirmarCertificadoDTO),
   auditarAccion('solicitud', (req) => req.params.id!),
   solicitudController.firmarCertificado.bind(solicitudController)
@@ -370,8 +403,21 @@ router.get(
  */
 router.get(
   '/dashboard',
-  requirePermission(['SOLICITUDES_VER', 'ADMIN']),
+  requirePermission(['SOLICITUDES_VER']),
   solicitudController.dashboard.bind(solicitudController)
+);
+
+/**
+ * GET /api/solicitudes/:id/constancia-entrega
+ * Descargar constancia de entrega de certificado
+ * Solo disponible para solicitudes en estado ENTREGADO
+ * Permiso: SOLICITUDES_VER
+ */
+router.get(
+  '/:id/constancia-entrega',
+  requirePermission(['SOLICITUDES_VER']),
+  auditarAccion('solicitud', (req) => req.params.id!),
+  solicitudController.descargarConstanciaEntrega.bind(solicitudController)
 );
 
 export default router;

@@ -46,9 +46,9 @@ export const CreateActaFisicaDTO = z.object({
     .transform((val) => new Date(val))
     .optional(),
 
-  libro: z
+  libroId: z
     .string()
-    .max(50, 'El libro no puede tener más de 50 caracteres')
+    .uuid('El ID del libro debe ser un UUID válido')
     .optional(),
 
   folio: z
@@ -114,9 +114,9 @@ export const UpdateActaFisicaDTO = z.object({
     .transform((val) => new Date(val))
     .optional(),
 
-  libro: z
+  libroId: z
     .string()
-    .max(50, 'El libro no puede tener más de 50 caracteres')
+    .uuid('El ID del libro debe ser un UUID válido')
     .optional(),
 
   folio: z
@@ -140,6 +140,9 @@ export const UpdateActaFisicaDTO = z.object({
     .optional(),
 
   observaciones: z.string().optional(),
+
+  // NOTA: No existe campo 'estadoFisico' en la BD
+  // El campo 'estado' es para el flujo de trabajo (DISPONIBLE, ASIGNADA, etc.)
 });
 
 export type UpdateActaFisicaDTOType = z.infer<typeof UpdateActaFisicaDTO>;

@@ -1,10 +1,16 @@
+/**
+ * Protected Layout Router
+ * Detecta el rol del usuario y renderiza el layout específico
+ */
+
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useThemeStore } from '@/stores/themeStore';
-import { AppSidebar } from '@/components/app-sidebar';
+import { useRole } from '@/hooks/useRole';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/app-sidebar';
 import { Button } from '@/components/ui/button';
 import { Moon, Sun, Search, Home, ClipboardList, FileText, CreditCard, User, Settings } from 'lucide-react';
+import { useThemeStore } from '@/stores/themeStore';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -33,8 +39,58 @@ import {
 } from '@/components/ui/command';
 import { useState, useEffect } from 'react';
 
+// Importar layouts específicos por rol
+import MesaDePartesLayout from './MesaDePartesLayout';
+import EditorLayout from './EditorLayout';
+import UGELLayout from './UGELLayout';
+import SiagecLayout from './SiagecLayout';
+import AdminLayout from './AdminLayout';
+
 export default function ProtectedLayout() {
   const { isAuthenticated } = useAuth();
+  const { isMesaDePartes, isEditor, isEncargadoUgel, isEncargadoSiagec, isDireccion, isAdmin } = useRole();
+
+  // El polling de sesión se ejecuta automáticamente en el hook useAuth
+  // Esto verifica la sesión cada 30 segundos y hace logout automático si falla
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Renderizar layout específico según el rol
+  if (isMesaDePartes) {
+    return <MesaDePartesLayout />;
+  }
+
+  if (isEditor) {
+    return <EditorLayout />;
+  }
+
+  if (isEncargadoUgel) {
+    return <UGELLayout />;
+  }
+
+  if (isEncargadoSiagec) {
+    return <SiagecLayout />;
+  }
+
+  if (isDireccion) {
+    // TODO: Implementar DireccionLayout (Sprint 9)
+    return <GenericProtectedLayout />;
+  }
+
+  if (isAdmin) {
+    return <AdminLayout />;
+  }
+
+  // Por defecto, layout genérico para PUBLICO
+  return <GenericProtectedLayout />;
+}
+
+/**
+ * Layout Genérico (temporal para roles sin layout específico)
+ */
+function GenericProtectedLayout() {
   const { setTheme } = useThemeStore();
   const [open, setOpen] = useState(false);
 
@@ -49,18 +105,11 @@ export default function ProtectedLayout() {
     return () => document.removeEventListener('keydown', down);
   }, []);
 
-  // El polling de sesión se ejecuta automáticamente en el hook useAuth
-  // Esto verifica la sesión cada 30 segundos y hace logout automático si falla
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 bg-background px-4">
+        <header className="flex h-16 shrink-0 items-center gap-2 bg-background px-4 border-b">
           <SidebarTrigger className="-ml-1" />
           <Breadcrumb>
             <BreadcrumbList>
@@ -78,7 +127,7 @@ export default function ProtectedLayout() {
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="outline"
-              className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2 border-input bg-background hover:bg-accent"
+              className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2"
               onClick={() => setOpen(true)}
             >
               <Search className="h-4 w-4 xl:mr-2" />

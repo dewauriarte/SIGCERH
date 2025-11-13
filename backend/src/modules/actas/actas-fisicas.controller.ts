@@ -133,6 +133,14 @@ export class ActasFisicasController {
    * PUT /api/actas/:id/metadata
    * Actualizar metadata de acta
    */
+  /**
+   * PUT /api/actas/:id
+   * Actualizar acta (método genérico)
+   */
+  async update(req: Request, res: Response): Promise<void> {
+    return this.updateMetadata(req, res);
+  }
+
   async updateMetadata(req: Request, res: Response): Promise<void> {
     try {
       const id = req.params.id!;
@@ -381,6 +389,29 @@ export class ActasFisicasController {
       res.status(400).json({
         success: false,
         message: error.message || 'Error al validar con correcciones',
+      });
+    }
+  }
+
+  /**
+   * GET /api/actas/estadisticas
+   * Obtener estadísticas generales de actas
+   * Útil para monitoreo y dashboards
+   */
+  async getEstadisticas(_req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await actaFisicaService.getEstadisticas();
+
+      res.status(200).json({
+        success: true,
+        message: 'Estadísticas de actas',
+        data: stats,
+      });
+    } catch (error: any) {
+      logger.error('Error en getEstadisticas:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener estadísticas',
       });
     }
   }

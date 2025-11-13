@@ -7,22 +7,24 @@ import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
   onFileSelect: (files: File[]) => void;
-  accept?: string;
+  accept?: string | Record<string, string[]>;
   multiple?: boolean;
-  maxSize?: number; // en MB
+  maxSize?: number; // en bytes
   maxFiles?: number;
   disabled?: boolean;
   className?: string;
+  label?: string;
 }
 
 export function FileUpload({
   onFileSelect,
   accept,
   multiple = false,
-  maxSize = 10,
+  maxSize = 10 * 1024 * 1024,
   maxFiles = 5,
   disabled = false,
   className,
+  label,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -30,11 +32,29 @@ export function FileUpload({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): boolean => {
-    if (maxSize && file.size > maxSize * 1024 * 1024) {
-      setError(`El archivo ${file.name} excede el tamaño máximo de ${maxSize}MB`);
+    if (maxSize && file.size > maxSize) {
+      const maxSizeMB = (maxSize / 1024 / 1024).toFixed(0);
+      setError(`El archivo ${file.name} excede el tamaño máximo de ${maxSizeMB}MB`);
       return false;
     }
     return true;
+  };
+  
+  const getAcceptString = (): string => {
+    if (typeof accept === 'string') return accept;
+    if (typeof accept === 'object') {
+      const extensions = Object.values(accept).flat();
+      return extensions.join(', ');
+    }
+    return '';
+  };
+  
+  const getAcceptAttribute = (): string | undefined => {
+    if (typeof accept === 'string') return accept;
+    if (typeof accept === 'object') {
+      return Object.values(accept).flat().join(',');
+    }
+    return undefined;
   };
 
   const handleFiles = (files: FileList | null) => {
@@ -107,10 +127,10 @@ export function FileUpload({
         <CardContent className="flex flex-col items-center justify-center p-8 text-center">
           <Upload className={cn('mb-4 h-10 w-10 text-muted-foreground', isDragging && 'text-primary')} />
           <h3 className="mb-2 text-sm font-semibold">
-            {isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos o haz clic para seleccionar'}
+            {label || (isDragging ? 'Suelta los archivos aquí' : 'Arrastra archivos o haz clic para seleccionar')}
           </h3>
           <p className="text-xs text-muted-foreground">
-            {accept || 'Todos los formatos'} • Máximo {maxSize}MB
+            {getAcceptString() || 'Todos los formatos'} • Máximo {(maxSize / 1024 / 1024).toFixed(0)}MB
             {multiple && ` • Hasta ${maxFiles} archivos`}
           </p>
         </CardContent>
@@ -120,7 +140,7 @@ export function FileUpload({
         ref={inputRef}
         type="file"
         className="hidden"
-        accept={accept}
+        accept={getAcceptAttribute()}
         multiple={multiple}
         onChange={(e) => handleFiles(e.target.files)}
         disabled={disabled}

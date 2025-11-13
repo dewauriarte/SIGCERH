@@ -4,6 +4,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import { seedRolesYPermisos } from './01_roles_permisos';
 import { seedAniosLectivos } from './02_anios_lectivos';
 import { seedGrados } from './03_grados';
 import { seedAreasCurriculares } from './04_areas_curriculares';
@@ -27,6 +28,7 @@ async function main() {
     console.log(`📍 Institución activa: ${institucion.nombre}\n`);
 
     // Ejecutar seeds en orden
+    await seedRolesYPermisos();
     await seedAniosLectivos();
     await seedGrados();
     await seedAreasCurriculares();

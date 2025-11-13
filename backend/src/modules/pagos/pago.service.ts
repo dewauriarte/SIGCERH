@@ -174,6 +174,7 @@ export class PagoService {
 
   /**
    * 3. Registrar pago en efectivo (Mesa de Partes)
+   * Versión que requiere pagoId existente
    */
   async registrarPagoEfectivo(
     pagoId: string,
@@ -233,6 +234,93 @@ export class PagoService {
   }
 
   /**
+   * 3b. Crear y registrar pago en efectivo desde solicitud (Mesa de Partes)
+   * Para solicitudes sin orden de pago previa
+   */
+  async crearYRegistrarPagoEfectivo(
+    data: any, // CrearPagoEfectivoDTOType
+    usuarioId: string
+  ) {
+    const institucionId = await this.getInstitucionId();
+
+    // Validar que la solicitud existe
+    const solicitud = await prisma.solicitud.findUnique({
+      where: { id: data.solicitudId },
+    });
+
+    if (!solicitud) {
+      throw new Error('Solicitud no encontrada');
+    }
+
+    // Verificar que la solicitud requiere pago
+    const estadosQuePuedenPagar = [
+      'ACTA_ENCONTRADA_PENDIENTE_PAGO',
+      'PAGO_PENDIENTE',
+    ];
+    
+    if (!estadosQuePuedenPagar.includes(solicitud.estado)) {
+      throw new Error(`La solicitud debe estar en estado pendiente de pago. Estado actual: ${solicitud.estado}`);
+    }
+
+    // Generar número de orden
+    const numeroOrden = await this.generarNumeroOrden();
+    const fechaPago = data.fechaPago ? new Date(data.fechaPago) : new Date();
+
+    // Crear el pago directamente como validado (efectivo no requiere validación previa)
+    const pago = await prisma.pago.create({
+      data: {
+        numeroorden: numeroOrden,
+        // ✅ NOTA: solicitud_id NO existe en schema, link está en solicitud.pago_id
+        institucion_id: institucionId,
+        monto: data.monto,
+        metodopago: 'EFECTIVO',
+        numerorecibo: data.numeroRecibo,
+        fechapago: fechaPago,
+        horapago: fechaPago,
+        estado: EstadoPago.VALIDADO,
+        conciliado: true,
+        fechaconciliacion: new Date(),
+        usuarioconciliacion_id: usuarioId,
+        observaciones: data.observaciones || `Pago en efectivo - Expediente: ${solicitud.numeroexpediente}`,
+      },
+    });
+
+    // Actualizar solicitud: vincular pago
+    await prisma.solicitud.update({
+      where: { id: data.solicitudId },
+      data: {
+        pago_id: pago.id,
+        fechavalidacionpago: new Date(),
+        usuariovalidacionpago_id: usuarioId,
+      },
+    });
+
+    // ✅ TRANSICIÓN AUTOMÁTICA: ACTA_ENCONTRADA_PENDIENTE_PAGO → LISTO_PARA_OCR
+    const { solicitudStateMachine } = await import('../solicitudes/state-machine');
+    await solicitudStateMachine.transicion(
+      data.solicitudId,
+      'LISTO_PARA_OCR' as any,
+      usuarioId,
+      'MESA_DE_PARTES' as any,
+      'Pago en efectivo validado - Editor puede subir el acta'
+    );
+
+    logger.info(`✅ Pago en efectivo creado y validado para solicitud ${data.solicitudId} - Estado: LISTO_PARA_OCR`);
+
+    // Retornar pago con información de la solicitud
+    return prisma.pago.findUnique({
+      where: { id: pago.id },
+      include: {
+        solicitud: {
+          include: {
+            estudiante: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * 4. Validar pago manualmente (Mesa de Partes)
    */
   async validarManualmente(
@@ -272,21 +360,33 @@ export class PagoService {
       },
     });
 
-    // Actualizar solicitud a PAGO_VALIDADO
+    // Actualizar solicitud a LISTO_PARA_OCR (pago validado, editor puede subir acta)
     const solicitud = await prisma.solicitud.findFirst({
       where: { pago_id: pagoId },
     });
 
-    if (solicitud) {
-      await prisma.solicitud.update({
-        where: { id: solicitud.id },
-        data: {
-          estado: 'PAGO_VALIDADO',
-          fechavalidacionpago: new Date(),
-          usuariovalidacionpago_id: usuarioId,
-        },
-      });
-    }
+      if (solicitud) {
+        // Actualizar datos de validación
+        await prisma.solicitud.update({
+          where: { id: solicitud.id },
+          data: {
+            fechavalidacionpago: new Date(),
+            usuariovalidacionpago_id: usuarioId,
+          },
+        });
+
+        // ✅ TRANSICIÓN AUTOMÁTICA: ACTA_ENCONTRADA_PENDIENTE_PAGO → LISTO_PARA_OCR
+        const { solicitudStateMachine } = await import('../solicitudes/state-machine');
+        await solicitudStateMachine.transicion(
+          solicitud.id,
+          'LISTO_PARA_OCR' as any,
+          usuarioId,
+          'MESA_DE_PARTES' as any,
+          'Pago validado manualmente - Editor puede subir el acta'
+        );
+
+        logger.info(`✅ Solicitud ${solicitud.numeroexpediente} actualizada a LISTO_PARA_OCR`);
+      }
 
     logger.info(`Pago ${pagoId} validado manualmente por usuario ${usuarioId}`);
 
@@ -365,8 +465,14 @@ export class PagoService {
       }),
     ]);
 
+    // Mapear datos para que solicitud sea un objeto en lugar de array
+    const pagosMap = data.map((pago) => ({
+      ...pago,
+      solicitud: pago.solicitud[0] || null,
+    }));
+
     return {
-      data,
+      data: pagosMap,
       meta: {
         total,
         page,
@@ -378,6 +484,7 @@ export class PagoService {
 
   /**
    * 8. Listar pagos con filtros
+   * Por defecto, muestra solo pagos PENDIENTES y PAGADOS (excluye VALIDADOS)
    */
   async findAll(filtros: FiltrosPagoDTOType, pagination: { page: number; limit: number }) {
     const { page, limit } = pagination;
@@ -385,8 +492,14 @@ export class PagoService {
 
     const where: any = {};
 
+    // Si no se especifica estado, mostrar solo PENDIENTES y PAGADOS (excluir VALIDADOS)
     if (filtros.estado) {
       where.estado = filtros.estado;
+    } else {
+      // Por defecto: mostrar solo pagos que requieren atención
+      where.estado = {
+        in: [EstadoPago.PENDIENTE, EstadoPago.PAGADO],
+      };
     }
 
     if (filtros.metodopago) {
@@ -428,14 +541,30 @@ export class PagoService {
               id: true,
               numeroexpediente: true,
               numeroseguimiento: true,
+              estudiante: {
+                select: {
+                  id: true,
+                  dni: true,
+                  nombres: true,
+                  apellidopaterno: true,
+                  apellidomaterno: true,
+                },
+              },
             },
           },
         },
       }),
     ]);
 
+    // Mapear datos para que solicitud sea un objeto en lugar de array
+    // Nota: pago.solicitud es un array porque es relación 1:n (un pago puede tener múltiples solicitudes)
+    const pagosMap = data.map((pago) => ({
+      ...pago,
+      solicitud: pago.solicitud[0] || null, // Tomar la primera solicitud relacionada
+    }));
+
     return {
-      data,
+      data: pagosMap,
       meta: {
         total,
         page,
@@ -493,6 +622,54 @@ export class PagoService {
     logger.info(`${resultado.count} órdenes marcadas como expiradas`);
 
     return resultado.count;
+  }
+
+  /**
+   * 11. Obtener estadísticas de pagos
+   * Para Mesa de Partes - Dashboard
+   */
+  async getEstadisticas() {
+    const [
+      totalPagos,
+      pendientesValidacion,
+      validados,
+      rechazados,
+      pagos,
+    ] = await Promise.all([
+      prisma.pago.count(),
+      prisma.pago.count({
+        where: {
+          OR: [
+            { estado: EstadoPago.PAGADO },
+            { estado: EstadoPago.PENDIENTE },
+          ],
+        },
+      }),
+      prisma.pago.count({
+        where: { estado: EstadoPago.VALIDADO },
+      }),
+      prisma.pago.count({
+        where: { estado: EstadoPago.RECHAZADO },
+      }),
+      prisma.pago.findMany({
+        select: { monto: true, estado: true },
+      }),
+    ]);
+
+    // Calcular montos totales
+    const montoTotal = pagos.reduce((sum, p) => sum + Number(p.monto), 0);
+    const montoValidado = pagos
+      .filter((p) => p.estado === EstadoPago.VALIDADO)
+      .reduce((sum, p) => sum + Number(p.monto), 0);
+
+    return {
+      totalPagos,
+      pendientesValidacion,
+      validados,
+      rechazados,
+      montoTotal,
+      montoValidado,
+    };
   }
 }
 

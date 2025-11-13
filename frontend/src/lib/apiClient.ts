@@ -27,7 +27,7 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 segundos
+  timeout: 120000, // 120 segundos (2 minutos) para operaciones OCR con Gemini
 });
 
 // ==================== REQUEST INTERCEPTOR ====================

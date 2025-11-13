@@ -40,10 +40,22 @@ export const registrarAuditoria = async (
   userAgent?: string
 ): Promise<void> => {
   try {
+    // Validar que entidadId sea un UUID válido o generar uno temporal
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let validEntidadId = entidadId;
+    
+    if (!uuidRegex.test(entidadId)) {
+      // Si no es un UUID válido, generar uno temporal o usar null
+      // Para acciones como "listado", "nuevo", etc., usamos un UUID de referencia
+      const { randomUUID } = await import('crypto');
+      validEntidadId = randomUUID();
+      logger.debug(`Auditoría: Generando UUID temporal para ${entidad}:${entidadId} -> ${validEntidadId}`);
+    }
+
     await prisma.auditoria.create({
       data: {
         entidad,
-        entidadid: entidadId,
+        entidadid: validEntidadId,
         accion,
         usuario_id: usuarioId,
         datosanteriores: datosAnteriores ? JSON.parse(JSON.stringify(datosAnteriores)) : null,

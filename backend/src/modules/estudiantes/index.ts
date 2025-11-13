@@ -1,10 +1,12 @@
 /**
- * Exportaciones centralizadas del módulo de estudiantes
+ * Exportar componentes del módulo de Estudiantes
  */
 
-export * from './types';
-export * from './dtos';
-export { estudiantesService } from './estudiantes.service';
 export { estudiantesController } from './estudiantes.controller';
-export { default as estudiantesRoutes } from './estudiantes.routes';
+export { estudiantesService } from './estudiantes.service';
+export { EstadoEstudiante, Sexo } from './types';
+export { CreateEstudianteDTO, UpdateEstudianteDTO, FiltrosEstudianteDTO } from './dtos';
+export type { CreateEstudianteDTOType, UpdateEstudianteDTOType, FiltrosEstudianteDTOType } from './dtos';
+import estudiantesRoutes from './estudiantes.routes';
 
+export default estudiantesRoutes;

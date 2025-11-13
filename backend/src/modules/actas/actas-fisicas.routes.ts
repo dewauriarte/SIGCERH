@@ -8,6 +8,7 @@ import { authenticate } from '@middleware/auth.middleware';
 import { requirePermission } from '@middleware/authorization.middleware';
 import { auditarAccion } from '@middleware/audit.middleware';
 import { uploadActa, handleMulterError } from '@middleware/upload.middleware';
+import { uploadRateLimiter, ocrRateLimiter } from '@middleware/rate-limit.middleware';
 import { validate } from './dtos';
 import {
   UpdateActaFisicaDTO,
@@ -25,13 +26,26 @@ const router = Router();
 router.use(authenticate);
 
 /**
+ * GET /api/actas/estadisticas
+ * Obtener estadísticas generales (debe ir antes de rutas con :id)
+ * Permiso: ACTAS_VER (EDITOR, ADMIN)
+ */
+router.get(
+  '/estadisticas',
+  requirePermission(['ACTAS_VER']),
+  actasFisicasController.getEstadisticas.bind(actasFisicasController)
+);
+
+/**
  * POST /api/actas
  * Subir acta con archivo y metadata
  * Permiso: ACTAS_EDITAR (EDITOR)
+ * Rate limit: 20 uploads/hora (protección contra abuso)
  */
 router.post(
   '/',
   requirePermission(['ACTAS_EDITAR']),
+  uploadRateLimiter, // Protección moderada
   uploadActa,
   handleMulterError,
   // Nota: La validación de CreateActaFisicaDTO se hace en el controller
@@ -63,8 +77,21 @@ router.get(
 );
 
 /**
+ * PUT /api/actas/:id
+ * Actualizar acta (ruta genérica)
+ * Permiso: ACTAS_EDITAR (EDITOR)
+ */
+router.put(
+  '/:id',
+  requirePermission(['ACTAS_EDITAR']),
+  validate(UpdateActaFisicaDTO),
+  auditarAccion('actafisica', (req) => req.params.id!),
+  actasFisicasController.update.bind(actasFisicasController)
+);
+
+/**
  * PUT /api/actas/:id/metadata
- * Actualizar metadata de acta
+ * Actualizar metadata de acta (alias)
  * Permiso: ACTAS_EDITAR (EDITOR)
  */
 router.put(
@@ -118,10 +145,12 @@ router.post(
  * ⭐ POST /api/actas/:id/procesar-ocr ⭐
  * CRÍTICO: Recibir datos de OCR y crear certificados automáticamente
  * Permiso: ACTAS_PROCESAR (EDITOR, SISTEMA)
+ * Rate limit: 50 procesamientos/hora por usuario
  */
 router.post(
   '/:id/procesar-ocr',
   requirePermission(['ACTAS_PROCESAR']),
+  ocrRateLimiter, // Protección para procesamiento intensivo
   validate(ProcesarOCRDTO),
   auditarAccion('actafisica', (req) => req.params.id!),
   actasFisicasController.procesarOCR.bind(actasFisicasController)

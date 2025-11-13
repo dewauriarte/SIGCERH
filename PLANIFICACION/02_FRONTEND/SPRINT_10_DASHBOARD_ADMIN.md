@@ -3,7 +3,7 @@
 > **Módulo**: Frontend - Dashboard Interno  
 > **Duración**: 4-5 días  
 > **Prioridad**: 🟡 ALTA  
-> **Estado**: ⬜ No iniciado  
+> **Estado**: ✅ COMPLETADO (Funcionalidades Core)  
 > **Rol**: ADMIN
 
 ---
@@ -16,15 +16,15 @@ Dashboard de administración completo: gestión de usuarios, roles, configuraci�
 
 ## 🎯 Funcionalidades
 
-- [ ] Dashboard con estadísticas generales
-- [ ] Gestión de usuarios (CRUD)
-- [ ] Gestión de roles y permisos
-- [ ] Configuración institucional
-- [ ] Gestión de niveles, grados, áreas curriculares
-- [ ] Plantillas de currículo (mapeo área-grado-año)
-- [ ] Reportes y exportación
-- [ ] Auditoría del sistema
-- [ ] Parámetros del sistema
+- [x] Dashboard con estadísticas generales ✅
+- [x] Gestión de usuarios (CRUD) ✅
+- [x] Gestión de roles y permisos ✅
+- [ ] Configuración institucional (Pendiente)
+- [ ] Gestión de niveles, grados, áreas curriculares (Pendiente)
+- [x] Plantillas de currículo (mapeo área-grado-año) ✅ **CRÍTICO PARA OCR**
+- [ ] Reportes y exportación (Pendiente)
+- [ ] Auditoría del sistema (Pendiente)
+- [ ] Parámetros del sistema (Pendiente)
 
 ---
 
@@ -254,17 +254,17 @@ Dashboard de administración completo: gestión de usuarios, roles, configuraci�
 
 ## 🧪 Criterios de Aceptación
 
-- [ ] Dashboard muestra estadísticas correctas
-- [ ] CRUD de usuarios funciona
-- [ ] Roles y permisos funcionan
-- [ ] Configuración institucional funciona
-- [ ] Logo se sube y muestra
-- [ ] Gestión académica funciona
-- [ ] **Plantillas de currículo funcionan correctamente** ⭐⭐
-- [ ] Reportes se generan y exportan
-- [ ] Auditoría se visualiza
-- [ ] Parámetros se editan
-- [ ] Responsive
+- [x] Dashboard muestra estadísticas correctas ✅
+- [x] CRUD de usuarios funciona (Lista, Activar/Desactivar, Bloquear, Reset Password) ✅
+- [x] Roles y permisos (Integrados en gestión de usuarios) ✅
+- [ ] Configuración institucional funciona (Pendiente)
+- [ ] Logo se sube y muestra (Pendiente)
+- [ ] Gestión académica funciona (Pendiente)
+- [x] **Plantillas de currículo funcionan correctamente** ⭐⭐ ✅
+- [ ] Reportes se generan y exportan (Pendiente)
+- [ ] Auditoría se visualiza (Pendiente)
+- [ ] Parámetros se editan (Pendiente)
+- [x] Responsive ✅
 
 ---
 

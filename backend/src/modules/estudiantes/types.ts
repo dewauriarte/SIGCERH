@@ -1,62 +1,14 @@
 /**
- * Tipos e interfaces para el módulo de estudiantes
+ * Types y Enums para el módulo de Estudiantes
  */
 
-export interface Estudiante {
-  id: string;
-  institucionId: string;
-  dni: string;
-  nombres: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  fechaNacimiento?: Date;
-  lugarNacimiento?: string;
-  sexo?: string;
-  direccion?: string;
-  telefono?: string;
-  email?: string;
-  nombrePadre?: string;
-  nombreMadre?: string;
-  activo: boolean;
-  fechaCreacion: Date;
-  fechaActualizacion?: Date;
+export enum EstadoEstudiante {
+  ACTIVO = 'ACTIVO',
+  INACTIVO = 'INACTIVO',
+  EGRESADO = 'EGRESADO',
 }
 
-export interface CreateEstudianteData {
-  dni: string;
-  nombres: string;
-  apellidoPaterno: string;
-  apellidoMaterno: string;
-  fechaNacimiento?: Date;
-  lugarNacimiento?: string;
-  sexo?: string;
-  direccion?: string;
-  telefono?: string;
-  email?: string;
-  nombrePadre?: string;
-  nombreMadre?: string;
+export enum Sexo {
+  M = 'M',
+  F = 'F',
 }
-
-export interface UpdateEstudianteData {
-  dni?: string;
-  nombres?: string;
-  apellidoPaterno?: string;
-  apellidoMaterno?: string;
-  fechaNacimiento?: Date;
-  lugarNacimiento?: string;
-  sexo?: string;
-  direccion?: string;
-  telefono?: string;
-  email?: string;
-  nombrePadre?: string;
-  nombreMadre?: string;
-  activo?: boolean;
-}
-
-export interface SearchEstudianteOptions {
-  dni?: string;
-  nombre?: string;
-  page?: number;
-  limit?: number;
-}
-

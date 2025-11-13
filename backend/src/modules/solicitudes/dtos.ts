@@ -6,57 +6,59 @@ import { z } from 'zod';
 import { EstadoSolicitud, ModalidadEntrega, Prioridad } from './types';
 
 /**
- * DTO para crear solicitud (Usuario Público)
- * Basado en FLUJO_USUARIO_PUBLICO_WEB.md
+ * DTO para crear solicitud desde portal público
+ * Acepta datos completos del estudiante y los crea automáticamente
  */
 export const CreateSolicitudDTO = z.object({
+  // Indicador de apoderado
+  esApoderado: z.boolean().default(false),
+  
+  // Datos del apoderado (opcional)
+  datosApoderado: z.object({
+    tipoDocumento: z.string(),
+    numeroDocumento: z.string(),
+    nombres: z.string(),
+    apellidoPaterno: z.string(),
+    apellidoMaterno: z.string(),
+    relacionConEstudiante: z.string(),
+    // Carta poder (archivo convertido a base64)
+    cartaPoderBase64: z.string().optional(),
+    cartaPoderNombre: z.string().optional(),
+    cartaPoderTipo: z.string().optional(),
+  }).optional(),
+
   // Datos del estudiante
-  estudianteId: z.string().uuid('ID de estudiante inválido'),
-
-  // Tipo de solicitud
-  tipoSolicitudId: z.string().uuid('ID de tipo de solicitud inválido'),
-
-  // Modalidad de entrega
-  modalidadEntrega: z.nativeEnum(ModalidadEntrega, {
-    message: 'Modalidad de entrega inválida',
+  estudiante: z.object({
+    tipoDocumento: z.string().min(1),
+    numeroDocumento: z.string().length(8),
+    nombres: z.string().min(2),
+    apellidoPaterno: z.string().min(2),
+    apellidoMaterno: z.string().min(2),
+    fechaNacimiento: z.string(), // ISO date string
   }),
 
-  // Dirección de entrega (requerida si modalidad es FISICA)
-  direccionEntrega: z.string().optional(),
+  // Datos académicos
+  datosAcademicos: z.object({
+    departamento: z.string().min(1),
+    provincia: z.string().min(1),
+    distrito: z.string().min(1),
+    nombreColegio: z.string().min(3),
+    ultimoAnioCursado: z.number().int().min(1985).max(2012),
+    nivel: z.enum(['PRIMARIA', 'SECUNDARIA']),
+  }),
 
-  // Datos académicos para la búsqueda
-  colegioNombre: z
-    .string()
-    .min(3, 'Nombre del colegio debe tener al menos 3 caracteres')
-    .max(255),
+  // Contacto
+  contacto: z.object({
+    celular: z.string().length(9).regex(/^9\d{8}$/),
+    email: z.union([
+      z.string().email(),
+      z.literal(''),
+      z.undefined(),
+    ]).optional(),
+  }),
 
-  colegioUbicacion: z.string().optional(), // Departamento/Provincia/Distrito
-
-  anioLectivo: z
-    .number()
-    .int()
-    .min(1985, 'Año lectivo mínimo: 1985')
-    .max(2012, 'Año lectivo máximo: 2012'),
-
-  gradoId: z.string().uuid('ID de grado inválido'),
-
-  // Contacto (obligatorio según flujo)
-  celular: z
-    .string()
-    .min(9, 'Celular debe tener al menos 9 dígitos')
-    .max(15)
-    .regex(/^[0-9+\-\s]+$/, 'Formato de celular inválido'),
-
-  email: z.string().email('Email inválido').optional(),
-
-  // Motivo de solicitud
-  motivoSolicitud: z.string().min(5, 'Motivo debe tener al menos 5 caracteres'),
-
-  // Observaciones adicionales
-  observaciones: z.string().optional(),
-
-  // Prioridad (por defecto NORMAL)
-  prioridad: z.nativeEnum(Prioridad).optional().default(Prioridad.NORMAL),
+  // Motivo
+  motivoSolicitud: z.string().min(1),
 });
 
 export type CreateSolicitudDTOType = z.infer<typeof CreateSolicitudDTO>;
@@ -222,6 +224,7 @@ export type MarcarEntregadoDTOType = z.infer<typeof MarcarEntregadoDTO>;
 
 /**
  * DTO para filtros de consulta
+ * IMPORTANTE: Los query params vienen como strings, usar coerce para booleanos
  */
 export const FiltrosSolicitudDTO = z.object({
   estado: z.nativeEnum(EstadoSolicitud).optional(),
@@ -232,10 +235,18 @@ export const FiltrosSolicitudDTO = z.object({
   prioridad: z.nativeEnum(Prioridad).optional(),
   numeroExpediente: z.string().optional(),
   numeroseguimiento: z.string().optional(),
+  // Búsqueda genérica en múltiples campos (expediente, seguimiento, DNI)
+  busqueda: z.string().optional(),
   // Filtros por rol
   asignadoAEditor: z.string().uuid().optional(),
-  pendientePago: z.boolean().optional(),
-  conCertificado: z.boolean().optional(),
+  pendientePago: z.preprocess((val) => {
+    if (val === undefined || val === null || val === '') return undefined;
+    return val === 'true' || val === true;
+  }, z.boolean().optional()),
+  conCertificado: z.preprocess((val) => {
+    if (val === undefined || val === null || val === '') return undefined;
+    return val === 'true' || val === true;
+  }, z.boolean().optional())
 });
 
 export type FiltrosSolicitudDTOType = z.infer<typeof FiltrosSolicitudDTO>;

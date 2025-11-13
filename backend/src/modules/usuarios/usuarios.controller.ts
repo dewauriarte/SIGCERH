@@ -14,6 +14,33 @@ import {
 
 export class UsuariosController {
   /**
+   * GET /api/usuarios/editores
+   * Listar editores disponibles (rol EDITOR y activos)
+   */
+  async listEditores(req: Request, res: Response): Promise<void> {
+    try {
+      const editores = await usuariosService.list({
+        rol: 'EDITOR',
+        activo: true,
+        page: 1,
+        limit: 100, // Suficiente para editores
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Lista de editores disponibles',
+        data: editores.items,
+      });
+    } catch (error: unknown) {
+      logger.error('Error en listEditores:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener lista de editores',
+      });
+    }
+  }
+
+  /**
    * GET /api/usuarios
    * Listar usuarios con paginación y filtros
    */

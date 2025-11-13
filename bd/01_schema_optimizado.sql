@@ -98,7 +98,7 @@ CREATE TABLE Grado (
     nombreCorto VARCHAR(20),
     orden INT NOT NULL,
     activo BOOLEAN DEFAULT true,
-    UNIQUE(institucion_id, numero)
+    UNIQUE(institucion_id, nivel_id, numero)
 );
 
 -- Tablas Seccion y Matricula eliminadas - No aplican para sistema de certificados

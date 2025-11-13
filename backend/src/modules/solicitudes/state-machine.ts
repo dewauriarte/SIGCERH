@@ -62,12 +62,11 @@ export class SolicitudStateMachine {
     };
 
     // Actualizar campos de trazabilidad según el estado
-    this.updateTrazabilidadFields(updateData, estadoDestino, usuarioId);
+    this.updateTrazabilidadFields(updateData, estadoDestino, usuarioId, metadata);
 
-    // Agregar metadata adicional si existe
-    if (observaciones) {
-      updateData.observaciones = observaciones;
-    }
+    // NO sobrescribir observaciones - se preserva el JSON existente
+    // Las observaciones se manejan por separado en cada servicio específico
+    // (editor.service, mesa-partes.service, etc.)
 
     const solicitudActualizada = await prisma.solicitud.update({
       where: { id: solicitudId },
@@ -146,7 +145,8 @@ export class SolicitudStateMachine {
   private updateTrazabilidadFields(
     updateData: any,
     estadoDestino: EstadoSolicitud,
-    usuarioId: string
+    usuarioId: string,
+    metadata?: Record<string, any>
   ): void {
     const now = new Date();
 
@@ -156,14 +156,34 @@ export class SolicitudStateMachine {
         updateData.fechasolicitud = now;
         break;
 
+      case EstadoSolicitud.DERIVADO_A_EDITOR:
+        // Asignar editor si se especificó en metadata
+        if (metadata?.editorId) {
+          updateData.usuariogeneracion_id = metadata.editorId;
+        }
+        updateData.fechainicioproceso = now;
+        break;
+
+      case EstadoSolicitud.EN_BUSQUEDA:
+        // Si aún no hay editor asignado, usar el usuario que inicia la búsqueda
+        if (!updateData.usuariogeneracion_id) {
+          updateData.usuariogeneracion_id = usuarioId;
+        }
+        break;
+
       case EstadoSolicitud.PAGO_VALIDADO:
         updateData.usuariovalidacionpago_id = usuarioId;
         updateData.fechavalidacionpago = now;
         break;
 
       case EstadoSolicitud.EN_PROCESAMIENTO_OCR:
-        updateData.usuariogeneracion_id = usuarioId;
-        updateData.fechainicioproceso = now;
+        // Si ya hay editor asignado, no sobrescribirlo
+        if (!updateData.usuariogeneracion_id) {
+          updateData.usuariogeneracion_id = usuarioId;
+        }
+        if (!updateData.fechainicioproceso) {
+          updateData.fechainicioproceso = now;
+        }
         break;
 
       case EstadoSolicitud.CERTIFICADO_EMITIDO:

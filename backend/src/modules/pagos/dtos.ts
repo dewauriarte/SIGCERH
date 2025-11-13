@@ -76,6 +76,15 @@ export const RegistrarPagoEfectivoDTO = z.object({
   observaciones: z.string().optional(),
 });
 
+// DTO para registrar pago efectivo desde solicitud (Mesa de Partes)
+export const CrearPagoEfectivoDTO = z.object({
+  solicitudId: z.string().uuid(),
+  numeroRecibo: z.string().min(3).max(50),
+  monto: z.number().min(0),
+  fechaPago: z.string().optional(), // ISO date string
+  observaciones: z.string().optional(),
+});
+
 export const SubirComprobanteDTO = z.object({
   numerooperacion: z.string().min(3).max(50).optional(),
   observaciones: z.string().optional(),
@@ -128,6 +137,7 @@ export type CreateMetodoPagoDTOType = z.infer<typeof CreateMetodoPagoDTO>;
 export type UpdateMetodoPagoDTOType = z.infer<typeof UpdateMetodoPagoDTO>;
 export type GenerarOrdenDTOType = z.infer<typeof GenerarOrdenDTO>;
 export type RegistrarPagoEfectivoDTOType = z.infer<typeof RegistrarPagoEfectivoDTO>;
+export type CrearPagoEfectivoDTOType = z.infer<typeof CrearPagoEfectivoDTO>;
 export type SubirComprobanteDTOType = z.infer<typeof SubirComprobanteDTO>;
 export type ValidarPagoManualDTOType = z.infer<typeof ValidarPagoManualDTO>;
 export type RechazarComprobanteDTOType = z.infer<typeof RechazarComprobanteDTO>;

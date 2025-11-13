@@ -6,7 +6,21 @@
  * Tipos de notificación
  */
 export enum TipoNotificacion {
+  // Mesa de Partes
+  SOLICITUD_RECIBIDA = 'SOLICITUD_RECIBIDA',
+  PAGO_RECIBIDO = 'PAGO_RECIBIDO',
+  CERTIFICADO_LISTO = 'CERTIFICADO_LISTO',
+  
+  // Editor
+  SOLICITUD_DERIVADA = 'SOLICITUD_DERIVADA',
   ACTA_ENCONTRADA = 'ACTA_ENCONTRADA',
+  ACTA_NO_ENCONTRADA = 'ACTA_NO_ENCONTRADA',
+  
+  // UGEL
+  CERTIFICADO_PENDIENTE_VALIDACION = 'CERTIFICADO_PENDIENTE_VALIDACION',
+  CERTIFICADO_OBSERVADO = 'CERTIFICADO_OBSERVADO',
+  
+  // General
   CERTIFICADO_EMITIDO = 'CERTIFICADO_EMITIDO',
 }
 
@@ -39,6 +53,7 @@ export interface DatosNotificacion {
   monto?: number;
   urlDescarga?: string;
   enlacePlataforma?: string;
+  mensaje?: string;
 }
 
 /**

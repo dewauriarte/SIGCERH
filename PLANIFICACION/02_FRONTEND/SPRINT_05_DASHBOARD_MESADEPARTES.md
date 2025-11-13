@@ -109,33 +109,33 @@ Dashboard para Mesa de Partes: recibir solicitudes, derivar a Editor, validar pa
 - [ ] Actualiza estado de solicitud automáticamente
 
 ### 🟦 FASE 6: Certificados para Entrega (4h)
-- [ ] DataTable de certificados listos:
+- [x] DataTable de certificados listos:
   - Código
   - Estudiante
   - Tipo (Digital/Físico)
   - Fecha emisión
   - Acciones
-- [ ] Filtro: Solo certificados físicos
-- [ ] Ver certificado (preview PDF)
-- [ ] Botón "Marcar como Entregado"
-- [ ] Modal de confirmación:
-  - [ ] DNI del receptor
-  - [ ] Nombre del receptor
-  - [ ] Firma digital o checkbox de confirmación
-- [ ] Generar constancia de entrega (PDF)
+- [x] Filtro: Solo certificados físicos
+- [x] Ver certificado (preview PDF)
+- [x] Botón "Marcar como Entregado"
+- [x] Modal de confirmación:
+  - [x] DNI del receptor
+  - [x] Nombre del receptor
+  - [x] Firma digital o checkbox de confirmación
+- [x] Generar constancia de entrega (PDF)
 
 ### 🟦 FASE 7: Notificaciones (2h)
-- [ ] Badge con contador en menú
-- [ ] Lista de notificaciones:
+- [x] Badge con contador en menú
+- [x] Lista de notificaciones:
   - Nueva solicitud
   - Pago recibido (pendiente validación)
   - Certificado listo para entrega
 
 ### 🟦 FASE 8: Actualización Tiempo Real (2h)
-- [ ] Polling en todas las listas (30s)
-- [ ] Indicador de actualización
-- [ ] Notificaciones toast cuando hay cambios
-- [ ] Refrescar al detectar nuevo registro
+- [x] Polling en todas las listas (30s)
+- [x] Indicador de actualización
+- [x] Notificaciones toast cuando hay cambios
+- [x] Refrescar al detectar nuevo registro
 
 ---
 

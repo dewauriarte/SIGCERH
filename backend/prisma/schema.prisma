@@ -17,7 +17,7 @@ model actafisica {
   seccion               String?     @db.VarChar(10)
   turno                 String?     @db.VarChar(20)
   fechaemision          DateTime?   @db.Date
-  libro                 String?     @db.VarChar(50)
+  libro_id              String?     @db.Uuid
   folio                 String?     @db.VarChar(50)
   tipoevaluacion        String?     @db.VarChar(50)
   colegiorigen          String?     @db.VarChar(255)
@@ -37,6 +37,7 @@ model actafisica {
   fechasubida           DateTime?   @default(now()) @db.Timestamptz(6)
   aniolectivo           aniolectivo @relation(fields: [aniolectivo_id], references: [id], onUpdate: NoAction, map: "fk_acta_anio")
   grado                 grado       @relation(fields: [grado_id], references: [id], onUpdate: NoAction, map: "fk_acta_grado")
+  libro                 libro?      @relation(fields: [libro_id], references: [id], onUpdate: NoAction, map: "fk_acta_libro")
   solicitud             solicitud?  @relation(fields: [solicitud_id], references: [id], onUpdate: NoAction, map: "fk_acta_solicitud")
   usuario               usuario?    @relation(fields: [usuariosubida_id], references: [id], onUpdate: NoAction, map: "fk_acta_usuario")
 
@@ -45,6 +46,7 @@ model actafisica {
   @@index([grado_id], map: "idx_acta_grado")
   @@index([hasharchivo], map: "idx_acta_hash")
   @@index([estado], map: "idx_acta_estado")
+  @@index([libro_id], map: "idx_acta_libro")
   @@index([solicitud_id], map: "idx_acta_solicitud")
   @@index([datosextraidosjson], map: "idx_acta_json", type: Gin)
   @@index([numero], map: "idx_acta_numero")
@@ -269,6 +271,7 @@ model configuracioninstitucion {
   estudiante           estudiante[]
   grado                grado[]
   institucionusuario   institucionusuario[]
+  libro                libro[]
   metodopago           metodopago[]
   niveleducativo       niveleducativo[]
   pago                 pago[]
@@ -344,9 +347,31 @@ model grado {
   configuracioninstitucion configuracioninstitucion @relation(fields: [institucion_id], references: [id], onUpdate: NoAction, map: "fk_grado_institucion")
   niveleducativo           niveleducativo?          @relation(fields: [nivel_id], references: [id], onUpdate: NoAction, map: "fk_grado_nivel")
 
-  @@unique([institucion_id, numero])
+  @@unique([institucion_id, nivel_id, numero])
   @@index([institucion_id], map: "idx_grado_institucion")
   @@index([nivel_id], map: "idx_grado_nivel")
+}
+
+model libro {
+  id                       String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institucion_id           String                   @default(dbgenerated("obtener_institucion_sesion()")) @db.Uuid
+  codigo                   String                   @db.VarChar(50)
+  descripcion              String?                  @db.VarChar(255)
+  ubicacion_fisica         String?                  @db.VarChar(255)
+  anio_inicio              Int?
+  anio_fin                 Int?
+  total_folios             Int?
+  estado                   String?                  @default("ACTIVO") @db.VarChar(20)
+  observaciones            String?
+  fecha_creacion           DateTime?                @default(now()) @db.Timestamptz(6)
+  activo                   Boolean?                 @default(true)
+  
+  actafisica               actafisica[]
+  configuracioninstitucion configuracioninstitucion @relation(fields: [institucion_id], references: [id], onUpdate: NoAction, map: "fk_libro_institucion")
+  
+  @@unique([institucion_id, codigo])
+  @@index([institucion_id], map: "idx_libro_institucion")
+  @@index([estado], map: "idx_libro_estado")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

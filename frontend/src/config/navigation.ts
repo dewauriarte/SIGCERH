@@ -4,7 +4,6 @@ import {
   CreditCard,
   Settings,
   ClipboardList,
-  Search,
   Users,
   FolderSearch,
   FileScan,
@@ -16,6 +15,14 @@ import {
   BarChart3,
   Database,
   FileArchive,
+  AlertTriangle,
+  Brain,
+  Shield,
+  Activity,
+  BookOpen,
+  GraduationCap,
+  Calendar,
+  Layers,
 } from 'lucide-react';
 
 export type UserRole =
@@ -89,41 +96,16 @@ export const navigationMesaDePartes: NavItem[] = [
     title: 'Solicitudes',
     url: '/solicitudes',
     icon: ClipboardList,
-    items: [
-      { title: 'Recibidas', url: '/solicitudes/recibidas' },
-      { title: 'Validar Datos', url: '/solicitudes/validar' },
-      { title: 'Derivar a Editor', url: '/solicitudes/derivar' },
-      { title: 'Todas', url: '/solicitudes/todas' },
-    ],
   },
   {
     title: 'Pagos',
     url: '/pagos',
     icon: CreditCard,
-    items: [
-      { title: 'Validar Efectivo', url: '/pagos/validar-efectivo' },
-      { title: 'Validados', url: '/pagos/validados' },
-      { title: 'Historial', url: '/pagos/historial' },
-    ],
   },
   {
     title: 'Entregas',
     url: '/entregas',
     icon: FileCheck,
-    items: [
-      { title: 'Pendientes', url: '/entregas/pendientes' },
-      { title: 'Entregados', url: '/entregas/entregados' },
-    ],
-  },
-  {
-    title: 'Búsqueda',
-    url: '/busqueda',
-    icon: Search,
-  },
-  {
-    title: 'Configuración',
-    url: '/configuracion',
-    icon: Settings,
   },
 ];
 
@@ -139,42 +121,26 @@ export const navigationEditor: NavItem[] = [
     title: 'Expedientes Asignados',
     url: '/expedientes',
     icon: FolderSearch,
-    items: [
-      { title: 'Pendientes de Búsqueda', url: '/expedientes/buscar-acta' },
-      { title: 'Acta Encontrada - Sin Pago', url: '/expedientes/sin-pago' },
-      { title: 'Con Pago - A Procesar', url: '/expedientes/a-procesar' },
-      { title: 'Observados', url: '/expedientes/observados' },
-    ],
   },
   {
-    title: 'Procesamiento OCR',
-    url: '/ocr',
-    icon: FileScan,
-    items: [
-      { title: 'Escanear Acta', url: '/ocr/escanear' },
-      { title: 'Validar OCR', url: '/ocr/validar' },
-      { title: 'Generar Borrador', url: '/ocr/borrador' },
-    ],
+    title: 'Procesar OCR',
+    url: '/editor/procesar-ocr',
+    icon: Brain,
   },
   {
-    title: 'Certificados',
-    url: '/certificados',
+    title: 'Actas Físicas',
+    url: '/editor/actas',
     icon: FileText,
-    items: [
-      { title: 'Borradores', url: '/certificados/borradores' },
-      { title: 'Enviados a UGEL', url: '/certificados/enviados' },
-      { title: 'Aprobados', url: '/certificados/aprobados' },
-    ],
   },
   {
-    title: 'Archivo de Actas',
-    url: '/archivo',
-    icon: FileArchive,
+    title: 'Borradores',
+    url: '/certificados/borradores',
+    icon: FileText,
   },
   {
-    title: 'Configuración',
-    url: '/configuracion',
-    icon: Settings,
+    title: 'Observados',
+    url: '/certificados/observados',
+    icon: AlertTriangle,
   },
 ];
 
@@ -318,7 +284,7 @@ export const navigationDireccion: NavItem[] = [
   },
 ];
 
-// ADMIN - Administrador del sistema
+// ADMIN - Administrador del Sistema
 export const navigationAdmin: NavItem[] = [
   {
     title: 'Dashboard',
@@ -328,67 +294,50 @@ export const navigationAdmin: NavItem[] = [
   },
   {
     title: 'Usuarios',
-    url: '/usuarios',
+    url: '/dashboard/usuarios',
     icon: Users,
-    items: [
-      { title: 'Todos los Usuarios', url: '/usuarios/todos' },
-      { title: 'Crear Usuario', url: '/usuarios/crear' },
-      { title: 'Gestionar Roles', url: '/usuarios/roles' },
-      { title: 'Permisos', url: '/usuarios/permisos' },
-    ],
   },
   {
-    title: 'Solicitudes',
-    url: '/solicitudes',
-    icon: ClipboardList,
-    items: [
-      { title: 'Todas', url: '/solicitudes/todas' },
-      { title: 'Por Estado', url: '/solicitudes/estado' },
-      { title: 'Observadas', url: '/solicitudes/observadas' },
-    ],
+    title: 'Roles',
+    url: '/dashboard/roles',
+    icon: Shield,
   },
   {
-    title: 'Certificados',
-    url: '/certificados',
-    icon: FileText,
-    items: [
-      { title: 'Todos', url: '/certificados/todos' },
-      { title: 'Emitidos', url: '/certificados/emitidos' },
-      { title: 'Anulados', url: '/certificados/anulados' },
-    ],
+    title: 'Libros de Actas',
+    url: '/dashboard/libros',
+    icon: BookOpen,
   },
   {
-    title: 'Configuración',
-    url: '/configuracion',
-    icon: Settings,
+    title: 'Configuración Académica',
+    url: '/dashboard/config-academica',
+    icon: GraduationCap,
     items: [
-      { title: 'General', url: '/configuracion/general' },
-      { title: 'Plantillas', url: '/configuracion/plantillas' },
-      { title: 'Pagos', url: '/configuracion/pagos' },
-      { title: 'Colegios', url: '/configuracion/colegios' },
-      { title: 'OCR', url: '/configuracion/ocr' },
+      { title: 'Estudiantes', url: '/dashboard/estudiantes', icon: Users },
+      { title: 'Grados', url: '/dashboard/grados', icon: GraduationCap },
+      { title: 'Años Lectivos', url: '/dashboard/anios-lectivos', icon: Calendar },
+      { title: 'Áreas Curriculares', url: '/dashboard/areas-curriculares', icon: BookOpen },
+      { title: 'Niveles Educativos', url: '/dashboard/niveles-educativos', icon: Layers },
     ],
   },
   {
     title: 'Reportes',
-    url: '/reportes',
+    url: '/dashboard/reportes',
     icon: BarChart3,
-    items: [
-      { title: 'Estadísticas Generales', url: '/reportes/estadisticas' },
-      { title: 'Auditoría', url: '/reportes/auditoria' },
-      { title: 'Métricas de Sistema', url: '/reportes/metricas' },
-    ],
   },
   {
-    title: 'Sistema',
-    url: '/sistema',
-    icon: Building2,
-    items: [
-      { title: 'Base de Datos', url: '/sistema/database' },
-      { title: 'Backups', url: '/sistema/backups' },
-      { title: 'Logs', url: '/sistema/logs' },
-      { title: 'Mantenimiento', url: '/sistema/mantenimiento' },
-    ],
+    title: 'Auditoría',
+    url: '/dashboard/reportes/auditoria',
+    icon: Activity,
+  },
+  {
+    title: 'Configuración',
+    url: '/dashboard/configuracion',
+    icon: Settings,
+  },
+  {
+    title: 'Base de Datos',
+    url: '/dashboard/base-datos',
+    icon: Database,
   },
 ];
 

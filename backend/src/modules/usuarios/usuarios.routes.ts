@@ -5,7 +5,7 @@
 import { Router } from 'express';
 import { usuariosController } from './usuarios.controller';
 import { authenticate } from '@middleware/auth.middleware';
-import { requireRole, requireOwnerOrAdmin } from '@middleware/authorization.middleware';
+import { requireRole, requirePermission, requireOwnerOrAdmin } from '@middleware/authorization.middleware';
 import { auditarAccion } from '@middleware/audit.middleware';
 import { validate, validateQuery } from './dtos';
 import {
@@ -19,6 +19,17 @@ const router = Router();
 
 // Todas las rutas requieren autenticación
 router.use(authenticate);
+
+/**
+ * GET /api/usuarios/editores
+ * Listar editores disponibles (para derivación)
+ * MESA_DE_PARTES, ADMIN
+ */
+router.get(
+  '/editores',
+  requirePermission(['USUARIOS_VER']),
+  usuariosController.listEditores.bind(usuariosController)
+);
 
 /**
  * GET /api/usuarios

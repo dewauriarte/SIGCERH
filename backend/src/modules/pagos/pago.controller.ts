@@ -85,6 +85,7 @@ export class PagoController {
   /**
    * POST /api/pagos/:id/registrar-efectivo
    * Registrar pago en efectivo (Mesa de Partes)
+   * Versión que requiere pagoId existente
    */
   async registrarEfectivo(req: Request, res: Response): Promise<void> {
     try {
@@ -104,6 +105,32 @@ export class PagoController {
       res.status(400).json({
         success: false,
         message: error.message || 'Error al registrar pago en efectivo',
+      });
+    }
+  }
+
+  /**
+   * POST /api/pagos/registrar-efectivo
+   * Crear y registrar pago en efectivo desde solicitud (Mesa de Partes)
+   * No requiere pagoId previo
+   */
+  async crearRegistrarEfectivo(req: Request, res: Response): Promise<void> {
+    try {
+      const usuarioId = (req as any).user.id; // CORREGIDO: user.id no usuario.id
+      const data = req.body; // CrearPagoEfectivoDTO will be validated in route
+
+      const pago = await pagoService.crearYRegistrarPagoEfectivo(data, usuarioId);
+
+      res.status(201).json({
+        success: true,
+        message: 'Pago en efectivo creado y validado exitosamente',
+        data: pago,
+      });
+    } catch (error: any) {
+      logger.error('Error en crearRegistrarEfectivo:', error.message);
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Error al crear pago en efectivo',
       });
     }
   }
@@ -235,6 +262,28 @@ export class PagoController {
       res.status(404).json({
         success: false,
         message: error.message || 'Pago no encontrado',
+      });
+    }
+  }
+
+  /**
+   * GET /api/pagos/estadisticas
+   * Obtener estadísticas de pagos (Mesa de Partes)
+   */
+  async getEstadisticas(req: Request, res: Response): Promise<void> {
+    try {
+      const estadisticas = await pagoService.getEstadisticas();
+
+      res.status(200).json({
+        success: true,
+        message: 'Estadísticas de pagos',
+        data: estadisticas,
+      });
+    } catch (error: any) {
+      logger.error('Error en getEstadisticas:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Error al obtener estadísticas',
       });
     }
   }

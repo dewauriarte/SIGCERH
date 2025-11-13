@@ -6,6 +6,8 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '@config/logger';
 import { solicitudStateMachine } from './state-machine';
+import { notificacionService } from '../notificaciones/notificacion.service';
+import { TipoNotificacion, CanalNotificacion } from '../notificaciones/types';
 import {
   EstadoSolicitud,
   RolSolicitud,
@@ -31,6 +33,193 @@ const prisma = new PrismaClient();
 export class SolicitudService {
   /**
    * ========================================
+   * PORTAL PÚBLICO
+   * ========================================
+   */
+
+  /**
+   * Crear solicitud desde portal público
+   * Crea automáticamente estudiante, colegio y otros registros necesarios
+   */
+  async createFromPublicPortal(data: any): Promise<any> {
+    logger.info('🚀 Creando solicitud desde portal público...');
+
+    // 1. Buscar o crear estudiante
+    let estudiante = await prisma.estudiante.findFirst({
+      where: {
+        dni: data.estudiante.numeroDocumento,
+      },
+    });
+
+    if (!estudiante) {
+      logger.info('📝 Creando nuevo estudiante:', data.estudiante.numeroDocumento);
+      
+      // Buscar institución por defecto o usar la primera disponible
+      const institucion = await prisma.configuracioninstitucion.findFirst();
+      
+      if (!institucion) {
+        throw new Error('No hay instituciones configuradas en el sistema');
+      }
+
+      estudiante = await prisma.estudiante.create({
+        data: {
+          institucion_id: institucion.id,
+          dni: data.estudiante.numeroDocumento,
+          nombres: data.estudiante.nombres,
+          apellidopaterno: data.estudiante.apellidoPaterno,
+          apellidomaterno: data.estudiante.apellidoMaterno,
+          fechanacimiento: new Date(data.estudiante.fechaNacimiento),
+          telefono: data.contacto.celular,
+          email: data.contacto.email || null,
+        },
+      });
+    } else {
+      logger.info('✅ Estudiante ya existe:', estudiante.id);
+    }
+
+    // 2. Por ahora usamos el nombre del colegio directamente
+    // La tabla de instituciones educativas puede no existir o tener otro nombre
+    const nombreColegio = data.datosAcademicos.nombreColegio;
+
+    // 3. Generar código de seguimiento único (S-YYYY-NNNNNN)
+    const anio = new Date().getFullYear();
+    const count = await prisma.solicitud.count({
+      where: {
+        fechasolicitud: {
+          gte: new Date(`${anio}-01-01`),
+          lte: new Date(`${anio}-12-31`),
+        },
+      },
+    });
+    const numero = String(count + 1).padStart(6, '0');
+    const numeroseguimiento = `S-${anio}-${numero}`;
+    const numeroexpediente = `EXP-${anio}-${numero}`;
+
+    logger.info('🔖 Código generado:', numeroseguimiento);
+
+    // 4. Buscar o crear tipo de solicitud por defecto
+    let tipoSolicitud = await prisma.tiposolicitud.findFirst();
+
+    if (!tipoSolicitud) {
+      logger.info('📋 Creando tipo de solicitud por defecto...');
+      tipoSolicitud = await prisma.tiposolicitud.create({
+        data: {
+          codigo: 'CERT_EST',
+          nombre: 'Certificado de Estudios',
+          descripcion: 'Solicitud de certificado de estudios históricos',
+          activo: true,
+        },
+      });
+    }
+
+    // 5. Preparar datos académicos y de contacto como JSON
+    const datosAcademicos = {
+      departamento: data.datosAcademicos.departamento,
+      provincia: data.datosAcademicos.provincia,
+      distrito: data.datosAcademicos.distrito,
+      nombreColegio: nombreColegio,
+      ultimoAnioCursado: data.datosAcademicos.ultimoAnioCursado,
+      nivel: data.datosAcademicos.nivel,
+    };
+
+    const contacto = {
+      celular: data.contacto.celular,
+      email: data.contacto.email || null,
+    };
+
+    // 6. Guardar archivo de carta poder si existe
+    let cartaPoderUrl: string | null = null;
+    
+    const tieneCartaPoder = data.esApoderado && 
+                            data.datosApoderado && 
+                            typeof data.datosApoderado.cartaPoderBase64 === 'string' && 
+                            data.datosApoderado.cartaPoderBase64.length > 0;
+    
+    if (tieneCartaPoder) {
+      try {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        
+        logger.info('📎 Guardando carta poder...');
+        
+        // Decodificar base64
+        const base64Data = data.datosApoderado!.cartaPoderBase64!.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Crear directorio si no existe
+        const storageDir = path.join(process.cwd(), 'storage', 'comprobantes');
+        await fs.mkdir(storageDir, { recursive: true });
+        
+        // Generar nombre único
+        const ext = data.datosApoderado!.cartaPoderNombre?.split('.').pop() || 'pdf';
+        const fileName = `carta-poder-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+        const filePath = path.join(storageDir, fileName);
+        
+        // Guardar archivo
+        await fs.writeFile(filePath, buffer);
+        cartaPoderUrl = `/storage/comprobantes/${fileName}`;
+        
+        logger.info('✅ Carta poder guardada: ' + cartaPoderUrl);
+      } catch (error) {
+        logger.error('❌ Error al guardar carta poder:', error);
+        // No fallar la solicitud por error en archivo
+      }
+    }
+
+    // 7. Crear solicitud con datos estructurados en observaciones (como JSON)
+    const solicitud = await prisma.solicitud.create({
+      data: {
+        numeroexpediente,
+        numeroseguimiento,
+        estudiante_id: estudiante.id,
+        tiposolicitud_id: tipoSolicitud.id,
+        estado: 'REGISTRADA' as EstadoSolicitud, // Estado inicial correcto: REGISTRADA
+        fechasolicitud: new Date(),
+        prioridad: 'NORMAL',
+        observaciones: JSON.stringify({
+          datosAcademicos,
+          contacto,
+          motivoSolicitud: data.motivoSolicitud,
+          esApoderado: data.esApoderado,
+          datosApoderado: data.datosApoderado ? {
+            tipoDocumento: data.datosApoderado.tipoDocumento,
+            numeroDocumento: data.datosApoderado.numeroDocumento,
+            nombres: data.datosApoderado.nombres,
+            apellidoPaterno: data.datosApoderado.apellidoPaterno,
+            apellidoMaterno: data.datosApoderado.apellidoMaterno,
+            relacionConEstudiante: data.datosApoderado.relacionConEstudiante,
+            cartaPoderUrl,
+          } : null,
+        }),
+      },
+    });
+
+    logger.info('✅ Solicitud creada en BD:', solicitud.id);
+
+    // Crear notificación para Mesa de Partes
+    try {
+      await notificacionService.crear(
+        TipoNotificacion.SOLICITUD_RECIBIDA,
+        'mesadepartes@sigcerh.local', // Email genérico para Mesa de Partes
+        solicitud.id,
+        {
+          nombreEstudiante: `${estudiante.apellidopaterno} ${estudiante.apellidomaterno}, ${estudiante.nombres}`,
+          codigoSeguimiento: numeroseguimiento,
+          mensaje: `Nueva solicitud recibida: ${numeroexpediente}`,
+        },
+        CanalNotificacion.EMAIL
+      );
+      logger.info('📧 Notificación creada para Mesa de Partes');
+    } catch (error: any) {
+      logger.error('Error al crear notificación:', error.message);
+      // No fallar la solicitud por error en notificación
+    }
+
+    return solicitud;
+  }
+
+  /**
+   * ========================================
    * CRUD BÁSICO
    * ========================================
    */
@@ -40,9 +229,13 @@ export class SolicitudService {
    * Estado inicial: REGISTRADA
    */
   async create(data: CreateSolicitudDTOType, usuarioId?: string): Promise<any> {
+    // NOTA: Este método usa un DTO diferente al del portal público
+    // Se mantiene para compatibilidad con otros módulos
+    const dataAny = data as any;
+
     // Validar que el estudiante existe
     const estudiante = await prisma.estudiante.findUnique({
-      where: { id: data.estudianteId },
+      where: { id: dataAny.estudianteId },
     });
 
     if (!estudiante) {
@@ -51,7 +244,7 @@ export class SolicitudService {
 
     // Validar que el tipo de solicitud existe
     const tipoSolicitud = await prisma.tiposolicitud.findUnique({
-      where: { id: data.tipoSolicitudId },
+      where: { id: dataAny.tipoSolicitudId },
     });
 
     if (!tipoSolicitud) {
@@ -79,13 +272,13 @@ export class SolicitudService {
       data: {
         numeroexpediente,
         numeroseguimiento,
-        estudiante_id: data.estudianteId,
-        tiposolicitud_id: data.tipoSolicitudId,
-        modalidadentrega: data.modalidadEntrega,
-        direccionentrega: data.direccionEntrega,
+        estudiante_id: dataAny.estudianteId,
+        tiposolicitud_id: dataAny.tipoSolicitudId,
+        modalidadentrega: dataAny.modalidadEntrega,
+        direccionentrega: dataAny.direccionEntrega,
         estado: EstadoSolicitud.REGISTRADA,
-        prioridad: data.prioridad || 'NORMAL',
-        observaciones: data.observaciones,
+        prioridad: dataAny.prioridad || 'NORMAL',
+        observaciones: dataAny.observaciones,
         usuariosolicitud_id: usuarioId,
         fechasolicitud: new Date(),
       },
@@ -153,7 +346,26 @@ export class SolicitudService {
     }
 
     if (filtros.numeroseguimiento) {
-      where.numeroseguimiento = filtros.numeroseguimiento;
+      where.numeroseguimiento = { contains: filtros.numeroseguimiento, mode: 'insensitive' };
+    }
+
+    // Búsqueda genérica en múltiples campos
+    if (filtros.busqueda) {
+      const searchTerm = filtros.busqueda.trim();
+      where.OR = [
+        { numeroexpediente: { contains: searchTerm, mode: 'insensitive' } },
+        { numeroseguimiento: { contains: searchTerm, mode: 'insensitive' } },
+        {
+          estudiante: {
+            OR: [
+              { dni: { contains: searchTerm, mode: 'insensitive' } },
+              { nombres: { contains: searchTerm, mode: 'insensitive' } },
+              { apellidopaterno: { contains: searchTerm, mode: 'insensitive' } },
+              { apellidomaterno: { contains: searchTerm, mode: 'insensitive' } },
+            ],
+          },
+        },
+      ];
     }
 
     if (filtros.fechaDesde || filtros.fechaHasta) {
@@ -211,6 +423,14 @@ export class SolicitudService {
               id: true,
               codigovirtual: true,
               estado: true,
+            },
+          },
+          usuario_solicitud_usuariogeneracion_idTousuario: {
+            select: {
+              id: true,
+              nombres: true,
+              apellidos: true,
+              email: true,
             },
           },
         },
@@ -306,11 +526,27 @@ export class SolicitudService {
             nombres: true,
             apellidopaterno: true,
             apellidomaterno: true,
+            fechanacimiento: true,
+            telefono: true,
+            email: true,
           },
         },
         tiposolicitud: {
           select: {
             nombre: true,
+          },
+        },
+        pago: {
+          select: {
+            id: true,
+            numeroorden: true,
+            monto: true,
+            metodopago: true,
+            estado: true,
+            fechapago: true,
+            fecharegistro: true,
+            numerorecibo: true,
+            urlcomprobante: true,
           },
         },
       },
@@ -320,18 +556,169 @@ export class SolicitudService {
       throw new Error('Código de seguimiento no encontrado');
     }
 
-    // Retornar solo información pública
-    return {
-      numeroExpediente: solicitud.numeroexpediente,
-      numeroseguimiento: solicitud.numeroseguimiento,
-      estado: solicitud.estado,
-      fechasolicitud: solicitud.fechasolicitud,
-      estudiante: {
-        nombre: `${solicitud.estudiante.nombres} ${solicitud.estudiante.apellidopaterno}`,
+    return this.formatSolicitudPublica(solicitud);
+  }
+
+  /**
+   * Buscar por código de seguimiento Y validar DNI (público - con validación)
+   */
+  async findByCodigoYDni(codigo: string, dni: string): Promise<any> {
+    const solicitud = await prisma.solicitud.findFirst({
+      where: { numeroseguimiento: codigo },
+      include: {
+        estudiante: {
+          select: {
+            dni: true,
+            nombres: true,
+            apellidopaterno: true,
+            apellidomaterno: true,
+            fechanacimiento: true,
+            telefono: true,
+            email: true,
+          },
+        },
+        tiposolicitud: {
+          select: {
+            nombre: true,
+          },
+        },
+        pago: {
+          select: {
+            id: true,
+            numeroorden: true,
+            monto: true,
+            metodopago: true,
+            estado: true,
+            fechapago: true,
+            fecharegistro: true,
+            numerorecibo: true,
+            urlcomprobante: true,
+          },
+        },
       },
-      tipoSolicitud: solicitud.tiposolicitud.nombre,
-      modalidadEntrega: solicitud.modalidadentrega,
+    });
+
+    if (!solicitud) {
+      throw new Error('Código de seguimiento no encontrado');
+    }
+
+    // Validar que el DNI coincida con el del estudiante
+    if (solicitud.estudiante.dni !== dni) {
+      throw new Error('El DNI ingresado no coincide con el de la solicitud');
+    }
+
+    return this.formatSolicitudPublica(solicitud);
+  }
+
+  /**
+   * Formatear solicitud para respuesta pública
+   */
+  private formatSolicitudPublica(solicitud: any): any {
+
+    // Parsear datos de observaciones (están guardados como JSON)
+    let datosExtras: any = {};
+    try {
+      if (solicitud.observaciones) {
+        datosExtras = JSON.parse(solicitud.observaciones);
+      }
+    } catch (error) {
+      logger.warn('No se pudo parsear observaciones como JSON:', solicitud.observaciones);
+      // Si no es JSON, asumir formato antiguo
+      datosExtras = {
+        datosAcademicos: {
+          nombreColegio: 'Información no disponible',
+          departamento: '',
+          provincia: '',
+          distrito: '',
+          ultimoAnioCursado: 0,
+          nivel: '',
+        },
+        contacto: {
+          celular: solicitud.estudiante.telefono || '',
+          email: solicitud.estudiante.email || null,
+        },
+        motivoSolicitud: '',
+        esApoderado: false,
+      };
+    }
+
+    // Retornar información pública en formato que espera el frontend
+    return {
+      solicitud: {
+        id: solicitud.id,
+        codigo: solicitud.numeroseguimiento,
+        numeroExpediente: solicitud.numeroexpediente,
+        estado: solicitud.estado,
+        fechaCreacion: solicitud.fechasolicitud,
+        fechaActualizacion: solicitud.fechaactualizacion || solicitud.fechasolicitud,
+        tipoSolicitud: solicitud.tiposolicitud.nombre,
+        modalidadEntrega: solicitud.modalidadentrega || 'DIGITAL',
+        certificadoId: solicitud.certificado_id,
+        pagoId: solicitud.pago_id,
+        actaEncontrada: solicitud.estado !== 'ACTA_NO_ENCONTRADA',
+        observaciones: solicitud.estado === 'ACTA_NO_ENCONTRADA' || solicitud.estado === 'OBSERVADO' ? solicitud.observaciones : null,
+        esApoderado: datosExtras.esApoderado || false,
+        datosApoderado: datosExtras.datosApoderado || null,
+        // Información del pago (si existe)
+        pago: solicitud.pago ? {
+          id: solicitud.pago.id,
+          numeroOrden: solicitud.pago.numeroorden,
+          monto: Number(solicitud.pago.monto),
+          metodoPago: solicitud.pago.metodopago,
+          estado: solicitud.pago.estado,
+          fechaPago: solicitud.pago.fechapago || solicitud.pago.fecharegistro,
+          numeroRecibo: solicitud.pago.numerorecibo,
+          urlComprobante: solicitud.pago.urlcomprobante,
+        } : null,
+        estudiante: {
+          tipoDocumento: 'DNI', // Por defecto DNI
+          numeroDocumento: solicitud.estudiante.dni,
+          nombres: solicitud.estudiante.nombres,
+          apellidoPaterno: solicitud.estudiante.apellidopaterno,
+          apellidoMaterno: solicitud.estudiante.apellidomaterno,
+          fechaNacimiento: solicitud.estudiante.fechanacimiento,
+        },
+        datosAcademicos: {
+          departamento: datosExtras.datosAcademicos?.departamento || '',
+          provincia: datosExtras.datosAcademicos?.provincia || '',
+          distrito: datosExtras.datosAcademicos?.distrito || '',
+          nombreColegio: datosExtras.datosAcademicos?.nombreColegio || 'Información no disponible',
+          ultimoAnioCursado: datosExtras.datosAcademicos?.ultimoAnioCursado || 0,
+          nivel: datosExtras.datosAcademicos?.nivel || '',
+        },
+        contacto: {
+          celular: datosExtras.contacto?.celular || solicitud.estudiante.telefono || '',
+          email: datosExtras.contacto?.email || solicitud.estudiante.email || null,
+        },
+        motivoSolicitud: datosExtras.motivoSolicitud || '',
+      },
+      timeline: [], // TODO: implementar historial de estados
+      proximoPaso: this.getProximoPaso(solicitud.estado || ''),
+      puedeDescargar: solicitud.estado === 'CERTIFICADO_EMITIDO',
+      puedePagar: solicitud.estado === 'ACTA_ENCONTRADA_PENDIENTE_PAGO' || solicitud.estado === 'EN_BUSQUEDA',
     };
+  }
+
+  /**
+   * Obtener mensaje del próximo paso según el estado
+   */
+  private getProximoPaso(estado: string): string {
+    const mensajes: Record<string, string> = {
+      'REGISTRADA': 'Su solicitud fue registrada. Nuestro equipo iniciará la búsqueda del acta en 3-5 días hábiles.',
+      'EN_BUSQUEDA': 'Estamos localizando su acta física en nuestros archivos.',
+      'ACTA_ENCONTRADA_PENDIENTE_PAGO': '¡Encontramos su acta! Realice el pago de S/ 15.00 para continuar.',
+      'ACTA_NO_ENCONTRADA': 'No pudimos localizar el acta. Revise las recomendaciones proporcionadas.',
+      'PAGO_VALIDADO': 'Pago confirmado. Su certificado está siendo procesado.',
+      'EN_PROCESAMIENTO_OCR': 'Procesando el certificado con tecnología OCR...',
+      'EN_VALIDACION_UGEL': 'Validando la autenticidad del acta con UGEL...',
+      'OBSERVADO_POR_UGEL': 'El certificado requiere correcciones. Revise las observaciones.',
+      'EN_REGISTRO_SIAGEC': 'Registrando digitalmente su certificado...',
+      'EN_FIRMA_DIRECCION': 'Esperando la firma digital de la Dirección...',
+      'CERTIFICADO_EMITIDO': '¡Su certificado está listo! Puede descargarlo ahora.',
+      'ENTREGADO': 'Certificado entregado exitosamente.',
+    };
+
+    return mensajes[estado] || 'Estado desconocido';
   }
 
   /**
@@ -846,6 +1233,184 @@ export class SolicitudService {
       { estado: EstadoSolicitud.CERTIFICADO_EMITIDO },
       options
     );
+  }
+
+  /**
+   * Obtener estadísticas del dashboard de Mesa de Partes
+   */
+  async getEstadisticasMesaPartes(): Promise<any> {
+    try {
+      // Contar solicitudes por estado
+      const [
+        totalSolicitudes,
+        pendientesDerivacion,
+        listasEntrega,
+        entregadosHoy,
+      ] = await Promise.all([
+        // Total de solicitudes
+        prisma.solicitud.count(),
+        
+        // Solicitudes pendientes de derivación
+        prisma.solicitud.count({
+          where: { estado: EstadoSolicitud.REGISTRADA }
+        }),
+        
+        // Certificados listos para entrega
+        prisma.solicitud.count({
+          where: { estado: EstadoSolicitud.CERTIFICADO_EMITIDO }
+        }),
+        
+        // Entregados hoy
+        prisma.solicitud.count({
+          where: {
+            estado: EstadoSolicitud.ENTREGADO,
+            solicitudhistorial: {
+              some: {
+                estadonuevo: EstadoSolicitud.ENTREGADO,
+                fecha: {
+                  gte: new Date(new Date().setHours(0, 0, 0, 0)), // Inicio del día
+                }
+              }
+            }
+          }
+        }),
+      ]);
+
+      return {
+        totalSolicitudes,
+        pendientesDerivacion,
+        listasEntrega,
+        entregadosHoy,
+      };
+    } catch (error) {
+      logger.error('Error al obtener estadísticas de Mesa de Partes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener solicitudes de la última semana agrupadas por día
+   */
+  async getSolicitudesUltimaSemana(): Promise<any> {
+    try {
+      const hace7Dias = new Date();
+      hace7Dias.setDate(hace7Dias.getDate() - 7);
+      hace7Dias.setHours(0, 0, 0, 0);
+
+      const solicitudes = await prisma.solicitud.findMany({
+        where: {
+          fechasolicitud: {
+            gte: hace7Dias,
+          }
+        },
+        select: {
+          fechasolicitud: true,
+        }
+      });
+
+      // Agrupar por día de la semana
+      const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      const contadorPorDia = dias.map((dia, index) => ({
+        dia,
+        solicitudes: 0,
+        pagos: 0, // Se llenará desde el servicio de pagos
+      }));
+
+      solicitudes.forEach(sol => {
+        const diaSemana = new Date(sol.fechasolicitud).getDay();
+        contadorPorDia[diaSemana].solicitudes++;
+      });
+
+      return contadorPorDia;
+    } catch (error) {
+      logger.error('Error al obtener solicitudes de última semana:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener actividad reciente del sistema
+   */
+  async getActividadReciente(limit: number = 10): Promise<any[]> {
+    try {
+      const historial = await prisma.solicitudhistorial.findMany({
+        take: limit,
+        orderBy: {
+          fecha: 'desc',
+        },
+        include: {
+          solicitud: {
+            include: {
+              estudiante: {
+                select: {
+                  nombres: true,
+                  apellidopaterno: true,
+                  apellidomaterno: true,
+                }
+              }
+            }
+          },
+          usuario: {
+            select: {
+              nombres: true,
+              apellidos: true,
+            }
+          }
+        },
+      });
+
+      return historial.map(h => {
+        const nombreCompleto = h.solicitud?.estudiante
+          ? `${h.solicitud.estudiante.nombres} ${h.solicitud.estudiante.apellidopaterno} ${h.solicitud.estudiante.apellidomaterno}`
+          : 'Desconocido';
+
+        let tipo: 'solicitud' | 'pago' | 'entrega' = 'solicitud';
+        let descripcion = '';
+
+        // Determinar tipo y descripción según el estado
+        switch (h.estadonuevo) {
+          case EstadoSolicitud.REGISTRADA:
+            tipo = 'solicitud';
+            descripcion = `Nueva solicitud recibida - ${nombreCompleto}`;
+            break;
+          case EstadoSolicitud.PAGO_VALIDADO:
+            tipo = 'pago';
+            descripcion = `Pago validado - ${nombreCompleto}`;
+            break;
+          case EstadoSolicitud.ENTREGADO:
+            tipo = 'entrega';
+            descripcion = `Certificado entregado - ${nombreCompleto}`;
+            break;
+          case EstadoSolicitud.ASIGNADA_BUSQUEDA:
+            tipo = 'solicitud';
+            descripcion = `Solicitud derivada a editor - ${nombreCompleto}`;
+            break;
+          case EstadoSolicitud.ACTA_ENCONTRADA:
+            tipo = 'solicitud';
+            descripcion = `Acta encontrada - ${nombreCompleto}`;
+            break;
+          case EstadoSolicitud.CERTIFICADO_EMITIDO:
+            tipo = 'solicitud';
+            descripcion = `Certificado emitido - ${nombreCompleto}`;
+            break;
+          default:
+            descripcion = h.estadonuevo 
+              ? `${h.estadonuevo.replace(/_/g, ' ')} - ${nombreCompleto}`
+              : `Cambio de estado - ${nombreCompleto}`;
+        }
+
+        return {
+          id: h.id,
+          tipo,
+          descripcion,
+          fecha: h.fecha,
+          estado: h.estadonuevo,
+        };
+      });
+    } catch (error) {
+      logger.error('Error al obtener actividad reciente:', error);
+      throw error;
+    }
   }
 }
 

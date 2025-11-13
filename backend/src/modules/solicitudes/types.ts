@@ -13,7 +13,8 @@ export enum EstadoSolicitud {
   EN_BUSQUEDA = 'EN_BUSQUEDA',
   ACTA_ENCONTRADA_PENDIENTE_PAGO = 'ACTA_ENCONTRADA_PENDIENTE_PAGO',
   ACTA_NO_ENCONTRADA = 'ACTA_NO_ENCONTRADA',
-  PAGO_VALIDADO = 'PAGO_VALIDADO',
+  LISTO_PARA_OCR = 'LISTO_PARA_OCR', // ✅ Después de pago validado
+  PAGO_VALIDADO = 'PAGO_VALIDADO', // Deprecated - mantener por compatibilidad
   EN_PROCESAMIENTO_OCR = 'EN_PROCESAMIENTO_OCR',
   EN_VALIDACION_UGEL = 'EN_VALIDACION_UGEL',
   OBSERVADO_POR_UGEL = 'OBSERVADO_POR_UGEL',
@@ -91,11 +92,16 @@ export const TRANSICIONES_VALIDAS: Record<
     description: 'Editor marca acta como encontrada o no encontrada',
   },
   [EstadoSolicitud.ACTA_ENCONTRADA_PENDIENTE_PAGO]: {
-    nextStates: [EstadoSolicitud.PAGO_VALIDADO],
+    nextStates: [EstadoSolicitud.LISTO_PARA_OCR],
     roles: [RolSolicitud.SISTEMA, RolSolicitud.MESA_DE_PARTES],
     requiresData: ['pago_id'],
     description:
       'Sistema valida pago automático o Mesa de Partes valida pago en efectivo',
+  },
+  [EstadoSolicitud.LISTO_PARA_OCR]: {
+    nextStates: [EstadoSolicitud.EN_PROCESAMIENTO_OCR],
+    roles: [RolSolicitud.EDITOR],
+    description: 'Pago validado - Editor puede subir acta física para OCR',
   },
   [EstadoSolicitud.ACTA_NO_ENCONTRADA]: {
     nextStates: [], // Estado final - proceso termina sin pago

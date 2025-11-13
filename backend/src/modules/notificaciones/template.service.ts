@@ -35,7 +35,12 @@ export class TemplateService {
 
       // Cargar plantillas específicas
       const templates = [
+        { tipo: TipoNotificacion.SOLICITUD_RECIBIDA, archivo: 'solicitud-recibida.hbs' },
+        { tipo: TipoNotificacion.PAGO_RECIBIDO, archivo: 'pago-recibido.hbs' },
+        { tipo: TipoNotificacion.CERTIFICADO_LISTO, archivo: 'certificado-listo.hbs' },
+        { tipo: TipoNotificacion.SOLICITUD_DERIVADA, archivo: 'solicitud-derivada.hbs' },
         { tipo: TipoNotificacion.ACTA_ENCONTRADA, archivo: 'acta-encontrada.hbs' },
+        { tipo: TipoNotificacion.ACTA_NO_ENCONTRADA, archivo: 'acta-no-encontrada.hbs' },
         { tipo: TipoNotificacion.CERTIFICADO_EMITIDO, archivo: 'certificado-emitido.hbs' },
       ];
 
@@ -83,7 +88,14 @@ export class TemplateService {
    */
   private obtenerAsunto(tipo: TipoNotificacion): string {
     const asuntos: Record<TipoNotificacion, string> = {
+      [TipoNotificacion.SOLICITUD_RECIBIDA]: 'Nueva solicitud recibida',
+      [TipoNotificacion.PAGO_RECIBIDO]: 'Pago recibido para validación',
+      [TipoNotificacion.CERTIFICADO_LISTO]: 'Certificado listo para entrega',
+      [TipoNotificacion.SOLICITUD_DERIVADA]: 'Solicitud asignada a usted',
       [TipoNotificacion.ACTA_ENCONTRADA]: 'Acta encontrada - Proceda con el pago',
+      [TipoNotificacion.ACTA_NO_ENCONTRADA]: 'Acta no encontrada',
+      [TipoNotificacion.CERTIFICADO_PENDIENTE_VALIDACION]: 'Certificado pendiente de validación',
+      [TipoNotificacion.CERTIFICADO_OBSERVADO]: 'Certificado observado por UGEL',
       [TipoNotificacion.CERTIFICADO_EMITIDO]: 'Su certificado está listo para descarga',
     };
 

@@ -84,8 +84,15 @@ const PERMISOS = [
   { codigo: 'SOLICITUDES_CREAR', nombre: 'Crear solicitudes', modulo: 'SOLICITUDES' },
   { codigo: 'SOLICITUDES_EDITAR', nombre: 'Editar solicitudes', modulo: 'SOLICITUDES' },
   { codigo: 'SOLICITUDES_ELIMINAR', nombre: 'Eliminar solicitudes', modulo: 'SOLICITUDES' },
-  { codigo: 'SOLICITUDES_VALIDAR_PAGO', nombre: 'Validar pagos', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_DERIVAR', nombre: 'Derivar solicitudes', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_BUSCAR', nombre: 'Buscar actas físicas', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_GESTIONAR', nombre: 'Gestionar solicitudes', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_VALIDAR_PAGO', nombre: 'Validar pagos de solicitudes', modulo: 'SOLICITUDES' },
   { codigo: 'SOLICITUDES_PROCESAR', nombre: 'Procesar solicitudes', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_VALIDAR', nombre: 'Validar solicitudes (UGEL)', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_REGISTRAR', nombre: 'Registrar en SIAGEC', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_FIRMAR', nombre: 'Firmar certificados', modulo: 'SOLICITUDES' },
+  { codigo: 'SOLICITUDES_ENTREGAR', nombre: 'Marcar como entregado', modulo: 'SOLICITUDES' },
 
   // MÓDULO: CERTIFICADOS
   { codigo: 'CERTIFICADOS_VER', nombre: 'Ver certificados', modulo: 'CERTIFICADOS' },
@@ -102,6 +109,30 @@ const PERMISOS = [
   { codigo: 'ESTUDIANTES_EDITAR', nombre: 'Editar estudiantes', modulo: 'ESTUDIANTES' },
   { codigo: 'ESTUDIANTES_ELIMINAR', nombre: 'Eliminar estudiantes', modulo: 'ESTUDIANTES' },
 
+  // MÓDULO: GRADOS
+  { codigo: 'GRADOS_VER', nombre: 'Ver grados', modulo: 'GRADOS' },
+  { codigo: 'GRADOS_CREAR', nombre: 'Crear grados', modulo: 'GRADOS' },
+  { codigo: 'GRADOS_EDITAR', nombre: 'Editar grados', modulo: 'GRADOS' },
+  { codigo: 'GRADOS_ELIMINAR', nombre: 'Eliminar grados', modulo: 'GRADOS' },
+
+  // MÓDULO: AÑOS LECTIVOS
+  { codigo: 'ANIOS_VER', nombre: 'Ver años lectivos', modulo: 'ANIOS' },
+  { codigo: 'ANIOS_CREAR', nombre: 'Crear años lectivos', modulo: 'ANIOS' },
+  { codigo: 'ANIOS_EDITAR', nombre: 'Editar años lectivos', modulo: 'ANIOS' },
+  { codigo: 'ANIOS_ELIMINAR', nombre: 'Eliminar años lectivos', modulo: 'ANIOS' },
+
+  // MÓDULO: ÁREAS CURRICULARES
+  { codigo: 'AREAS_VER', nombre: 'Ver áreas curriculares', modulo: 'AREAS' },
+  { codigo: 'AREAS_CREAR', nombre: 'Crear áreas', modulo: 'AREAS' },
+  { codigo: 'AREAS_EDITAR', nombre: 'Editar áreas', modulo: 'AREAS' },
+  { codigo: 'AREAS_ELIMINAR', nombre: 'Eliminar áreas', modulo: 'AREAS' },
+
+  // MÓDULO: NIVELES EDUCATIVOS
+  { codigo: 'NIVELES_VER', nombre: 'Ver niveles educativos', modulo: 'NIVELES' },
+  { codigo: 'NIVELES_CREAR', nombre: 'Crear niveles', modulo: 'NIVELES' },
+  { codigo: 'NIVELES_EDITAR', nombre: 'Editar niveles', modulo: 'NIVELES' },
+  { codigo: 'NIVELES_ELIMINAR', nombre: 'Eliminar niveles', modulo: 'NIVELES' },
+
   // MÓDULO: ACTAS FÍSICAS
   { codigo: 'ACTAS_VER', nombre: 'Ver actas físicas', modulo: 'ACTAS' },
   { codigo: 'ACTAS_SUBIR', nombre: 'Subir actas físicas', modulo: 'ACTAS' },
@@ -112,8 +143,10 @@ const PERMISOS = [
 
   // MÓDULO: PAGOS
   { codigo: 'PAGOS_VER', nombre: 'Ver pagos', modulo: 'PAGOS' },
+  { codigo: 'PAGOS_CREAR', nombre: 'Crear orden de pago', modulo: 'PAGOS' },
   { codigo: 'PAGOS_REGISTRAR', nombre: 'Registrar pagos', modulo: 'PAGOS' },
   { codigo: 'PAGOS_VALIDAR', nombre: 'Validar pagos', modulo: 'PAGOS' },
+  { codigo: 'PAGOS_EDITAR', nombre: 'Editar configuración de pagos', modulo: 'PAGOS' },
   { codigo: 'PAGOS_CONCILIAR', nombre: 'Conciliar pagos', modulo: 'PAGOS' },
 
   // MÓDULO: CONFIGURACIÓN
@@ -151,14 +184,19 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'SOLICITUDES_VER',
     'SOLICITUDES_CREAR',
     'SOLICITUDES_EDITAR',
+    'SOLICITUDES_DERIVAR',
     'SOLICITUDES_VALIDAR_PAGO',
+    'SOLICITUDES_ENTREGAR',
     'ESTUDIANTES_VER',
     'ESTUDIANTES_CREAR',
     'ESTUDIANTES_EDITAR',
     'PAGOS_VER',
+    'PAGOS_CREAR',
     'PAGOS_REGISTRAR',
+    'PAGOS_VALIDAR',
     'CERTIFICADOS_VER',
     'NOTIFICACIONES_VER',
+    'USUARIOS_VER', // Para ver lista de editores al derivar
   ],
   EDITOR: [
     'AUTH_LOGIN',
@@ -166,6 +204,8 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'AUTH_REFRESH',
     'SOLICITUDES_VER',
     'SOLICITUDES_EDITAR',
+    'SOLICITUDES_BUSCAR',
+    'SOLICITUDES_GESTIONAR',
     'SOLICITUDES_PROCESAR',
     'CERTIFICADOS_VER',
     'CERTIFICADOS_CREAR',
@@ -174,6 +214,18 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'ESTUDIANTES_VER',
     'ESTUDIANTES_CREAR',
     'ESTUDIANTES_EDITAR',
+    'GRADOS_VER',
+    'GRADOS_CREAR',
+    'GRADOS_EDITAR',
+    'ANIOS_VER',
+    'ANIOS_CREAR',
+    'ANIOS_EDITAR',
+    'AREAS_VER',
+    'AREAS_CREAR',
+    'AREAS_EDITAR',
+    'NIVELES_VER',
+    'NIVELES_CREAR',
+    'NIVELES_EDITAR',
     'ACTAS_VER',
     'ACTAS_SUBIR',
     'ACTAS_EDITAR',
@@ -187,6 +239,7 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'AUTH_REFRESH',
     'SOLICITUDES_VER',
     'SOLICITUDES_EDITAR',
+    'SOLICITUDES_VALIDAR',
     'SOLICITUDES_PROCESAR',
     'CERTIFICADOS_VER',
     'CERTIFICADOS_CREAR',
@@ -215,6 +268,7 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'AUTH_REFRESH',
     'SOLICITUDES_VER',
     'SOLICITUDES_EDITAR',
+    'SOLICITUDES_REGISTRAR',
     'SOLICITUDES_PROCESAR',
     'CERTIFICADOS_VER',
     'CERTIFICADOS_CREAR',
@@ -243,6 +297,7 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'AUTH_LOGOUT',
     'AUTH_REFRESH',
     'SOLICITUDES_VER',
+    'SOLICITUDES_FIRMAR',
     'CERTIFICADOS_VER',
     'CERTIFICADOS_FIRMAR',
     'CERTIFICADOS_ANULAR',
@@ -377,12 +432,19 @@ async function seed() {
   }
 }
 
-// Ejecutar seed
-seed()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// Exportar función para uso en seed principal
+export async function seedRolesYPermisos() {
+  return seed();
+}
+
+// Ejecutar seed si se ejecuta directamente
+if (import.meta.url === `file://${process.argv[1]}`) {
+  seed()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

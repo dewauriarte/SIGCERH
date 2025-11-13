@@ -102,7 +102,7 @@ export class ActaFisicaService {
         seccion: data.seccion,
         turno: data.turno,
         fechaemision: data.fechaEmision,
-        libro: data.libro,
+        libro_id: data.libroId,
         folio: data.folio,
         tipoevaluacion: data.tipoEvaluacion,
         colegiorigen: data.colegioOrigen,
@@ -117,6 +117,7 @@ export class ActaFisicaService {
       include: {
         aniolectivo: true,
         grado: true,
+        libro: true,
         usuario: {
           select: {
             id: true,
@@ -183,6 +184,7 @@ export class ActaFisicaService {
         include: {
           aniolectivo: true,
           grado: true,
+          libro: true,
           solicitud: {
             select: {
               id: true,
@@ -228,6 +230,7 @@ export class ActaFisicaService {
       include: {
         aniolectivo: true,
         grado: true,
+        libro: true,
         solicitud: {
           select: {
             id: true,
@@ -293,7 +296,7 @@ export class ActaFisicaService {
         seccion: data.seccion,
         turno: data.turno,
         fechaemision: data.fechaEmision,
-        libro: data.libro,
+        libro_id: data.libroId,
         folio: data.folio,
         tipoevaluacion: data.tipoEvaluacion,
         colegiorigen: data.colegioOrigen,
@@ -303,6 +306,7 @@ export class ActaFisicaService {
       include: {
         aniolectivo: true,
         grado: true,
+        libro: true,
       },
     });
 
@@ -456,7 +460,7 @@ export class ActaFisicaService {
     const numeroGrado = acta.grado.numero;
 
     logger.info(
-      `Procesando OCR para acta ${acta.numero}: ${datos.estudiantes.length} estudiantes`
+      `[OCR] Iniciando procesamiento - Acta: ${acta.numero}, Año: ${anio}, Grado: ${numeroGrado}, Estudiantes: ${datos.estudiantes.length}`
     );
 
     const plantillaCurriculo = await curriculoGradoService.getPlantillaByAnioGrado(
@@ -474,104 +478,127 @@ export class ActaFisicaService {
       `Plantilla de currículo: ${plantillaCurriculo.length} áreas curriculares`
     );
 
+    // Optimización: Buscar todos los DNIs existentes de una vez
+    const dnis = datos.estudiantes
+      .filter(e => e.dni)
+      .map(e => e.dni!);
+
+    const estudiantesExistentes = await prisma.estudiante.findMany({
+      where: {
+        dni: { in: dnis }
+      }
+    });
+
+    const mapEstudiantesExistentes = new Map(
+      estudiantesExistentes.map(e => [e.dni, e])
+    );
+
     // Procesar cada estudiante
     const certificadosCreados: string[] = [];
     const errores: any[] = [];
 
     for (const estudianteOCR of datos.estudiantes) {
       try {
-        // 1. Buscar o crear estudiante
-        let estudiante;
+        // Usar transacción para cada estudiante (atomicidad)
+        await prisma.$transaction(async (tx) => {
+          // 1. Buscar o crear estudiante
+          let estudiante = estudianteOCR.dni
+            ? mapEstudiantesExistentes.get(estudianteOCR.dni)
+            : undefined;
 
-        if (estudianteOCR.dni) {
-          // Buscar por DNI
-          estudiante = await prisma.estudiante.findFirst({
-            where: {
-              dni: estudianteOCR.dni,
+          if (!estudiante) {
+            // Crear nuevo estudiante
+            estudiante = await tx.estudiante.create({
+              data: {
+                dni: estudianteOCR.dni || `TEMP${Date.now()}${estudianteOCR.numero}`,
+                apellidopaterno: estudianteOCR.apellidoPaterno,
+                apellidomaterno: estudianteOCR.apellidoMaterno,
+                nombres: estudianteOCR.nombres,
+                sexo: estudianteOCR.sexo,
+                fechanacimiento: estudianteOCR.fechaNacimiento
+                  ? new Date(estudianteOCR.fechaNacimiento)
+                  : new Date('2000-01-01'), // Fecha temporal si no se proporciona
+                estado: 'ACTIVO',
+              },
+            });
+
+            // Agregar al mapa para próximas referencias
+            if (estudiante.dni) {
+              mapEstudiantesExistentes.set(estudiante.dni, estudiante);
+            }
+
+            logger.info(
+              `[OCR] Estudiante creado - DNI: ${estudiante.dni}, Nombre: ${estudiante.nombres} ${estudiante.apellidopaterno}`
+            );
+          }
+
+          // 2. Generar código virtual único
+          const codigoVirtual = `CERT-${anio}-${numeroGrado}-${Date.now()}-${estudiante.id.substring(0, 8)}`;
+
+          // 3. Crear certificado en estado BORRADOR
+          const certificado = await tx.certificado.create({
+            data: {
+              codigovirtual: codigoVirtual,
+              estudiante_id: estudiante.id,
+              fechaemision: new Date(),
+              horaemision: new Date(),
+              gradoscompletados: [acta.grado.nombre],
+              situacionfinal: estudianteOCR.situacionFinal || 'PENDIENTE',
+              estado: 'BORRADOR',
             },
           });
-        }
 
-        if (!estudiante) {
-          // Crear nuevo estudiante
-          estudiante = await prisma.estudiante.create({
+          // 4. Crear certificado detalle para el año/grado
+          const certificadoDetalle = await tx.certificadodetalle.create({
             data: {
-              dni: estudianteOCR.dni || `TEMP${Date.now()}${estudianteOCR.numero}`,
-              apellidopaterno: estudianteOCR.apellidoPaterno,
-              apellidomaterno: estudianteOCR.apellidoMaterno,
-              nombres: estudianteOCR.nombres,
-              sexo: estudianteOCR.sexo,
-              fechanacimiento: estudianteOCR.fechaNacimiento
-                ? new Date(estudianteOCR.fechaNacimiento)
-                : new Date('2000-01-01'), // Fecha temporal si no se proporciona
-              estado: 'ACTIVO',
+              certificado_id: certificado.id,
+              aniolectivo_id: acta.aniolectivo_id,
+              grado_id: acta.grado_id,
+              situacionfinal: estudianteOCR.situacionFinal,
+              orden: 1,
             },
           });
 
-          logger.info(
-            `Estudiante creado: ${estudiante.nombres} ${estudiante.apellidopaterno}`
-          );
-        }
-
-        // 2. Generar código virtual único
-        const codigoVirtual = `CERT-${anio}-${numeroGrado}-${Date.now()}-${estudiante.id.substring(0, 8)}`;
-
-        // 3. Crear certificado en estado BORRADOR
-        const certificado = await prisma.certificado.create({
-          data: {
-            codigovirtual: codigoVirtual,
-            estudiante_id: estudiante.id,
-            fechaemision: new Date(),
-            horaemision: new Date(),
-            gradoscompletados: [acta.grado.nombre],
-            situacionfinal: estudianteOCR.situacionFinal || 'PENDIENTE',
-            estado: 'BORRADOR',
-          },
-        });
-
-        // 4. Crear certificado detalle para el año/grado
-        const certificadoDetalle = await prisma.certificadodetalle.create({
-          data: {
-            certificado_id: certificado.id,
-            aniolectivo_id: acta.aniolectivo_id,
-            grado_id: acta.grado_id,
-            situacionfinal: estudianteOCR.situacionFinal,
-            orden: 1,
-          },
-        });
-
-        // 5. Crear notas según la plantilla de currículo
-        const notasCreadas: string[] = [];
-
-        for (const area of plantillaCurriculo) {
-          // Buscar nota en los datos del OCR
-          const notaOCR = estudianteOCR.notas[area.codigo] || estudianteOCR.notas[area.nombre];
-
-          await prisma.certificadonota.create({
-            data: {
+          // 5. Crear notas en batch según la plantilla de currículo
+          const notasData = plantillaCurriculo.map(area => {
+            const notaOCR = estudianteOCR.notas[area.codigo] || estudianteOCR.notas[area.nombre];
+            return {
               certificadodetalle_id: certificadoDetalle.id,
               area_id: area.id,
               nota: notaOCR !== undefined ? notaOCR : null,
               orden: area.orden,
-            },
+            };
           });
 
-          notasCreadas.push(area.nombre);
-        }
+          // Crear todas las notas de una vez (batch insert)
+          await tx.certificadonota.createMany({
+            data: notasData
+          });
 
-        certificadosCreados.push(certificado.id);
+          certificadosCreados.push(certificado.id);
 
-        logger.info(
-          `Certificado creado: ${certificado.codigovirtual} - ${estudiante.nombres} ${estudiante.apellidopaterno} (${notasCreadas.length} notas)`
-        );
+          logger.info(
+            `[OCR] Certificado creado - Código: ${certificado.codigovirtual}, Estudiante: ${estudiante.nombres} ${estudiante.apellidopaterno}, Notas: ${notasData.length}/${plantillaCurriculo.length}`
+          );
+        });
       } catch (error: any) {
+        const nombreCompleto = `${estudianteOCR.nombres} ${estudianteOCR.apellidoPaterno} ${estudianteOCR.apellidoMaterno}`;
         logger.error(
-          `Error al procesar estudiante ${estudianteOCR.nombres} ${estudianteOCR.apellidoPaterno}:`,
-          error
+          `[OCR] Error al procesar estudiante #${estudianteOCR.numero} "${nombreCompleto}" - Acta: ${acta.numero}`,
+          {
+            actaId: acta.id,
+            actaNumero: acta.numero,
+            estudiante: estudianteOCR,
+            error: error.message,
+            stack: error.stack
+          }
         );
         errores.push({
-          estudiante: `${estudianteOCR.nombres} ${estudianteOCR.apellidoPaterno}`,
+          numero: estudianteOCR.numero,
+          estudiante: nombreCompleto,
+          dni: estudianteOCR.dni,
           error: error.message,
+          timestamp: new Date().toISOString()
         });
       }
     }
@@ -587,7 +614,15 @@ export class ActaFisicaService {
     });
 
     logger.info(
-      `Procesamiento OCR completado: ${certificadosCreados.length} certificados creados, ${errores.length} errores`
+      `[OCR] Procesamiento completado - Acta: ${acta.numero}, Exitosos: ${certificadosCreados.length}/${datos.estudiantes.length}, Errores: ${errores.length}`,
+      {
+        actaId: acta.id,
+        actaNumero: acta.numero,
+        totalEstudiantes: datos.estudiantes.length,
+        certificadosCreados: certificadosCreados.length,
+        erroresCount: errores.length,
+        duracion: `${Date.now() - Date.parse(new Date().toISOString())}ms`
+      }
     );
 
     return {
@@ -869,6 +904,110 @@ export class ActaFisicaService {
     logger.info(`Acta ${acta.numero} exportada a Excel`);
 
     return Buffer.from(buffer);
+  }
+
+  /**
+   * ========================================
+   * ESTADÍSTICAS Y MONITOREO
+   * ========================================
+   */
+
+  /**
+   * Obtener estadísticas generales de actas
+   * Para dashboards y monitoreo del sistema
+   */
+  async getEstadisticas() {
+    // Estadísticas por estado
+    const porEstado = await prisma.actafisica.groupBy({
+      by: ['estado'],
+      _count: {
+        id: true
+      }
+    });
+
+    // Estadísticas por año lectivo
+    const porAnio = await prisma.actafisica.groupBy({
+      by: ['aniolectivo_id'],
+      _count: {
+        id: true
+      },
+      orderBy: {
+        aniolectivo_id: 'asc'
+      }
+    });
+
+    // Obtener información detallada de años
+    const aniosDetalle = await Promise.all(
+      porAnio.map(async (item) => {
+        const anio = await prisma.aniolectivo.findUnique({
+          where: { id: item.aniolectivo_id! },
+          select: { anio: true, id: true }
+        });
+        return {
+          anio: anio?.anio,
+          id: item.aniolectivo_id,
+          total: item._count.id
+        };
+      })
+    );
+
+    // Estadísticas por grado
+    const porGrado = await prisma.actafisica.groupBy({
+      by: ['grado_id'],
+      _count: {
+        id: true
+      }
+    });
+
+    // Total de actas
+    const total = await prisma.actafisica.count();
+
+    // Actas procesadas con OCR
+    const procesadas = await prisma.actafisica.count({
+      where: { procesadoconia: true }
+    });
+
+    // Actas pendientes
+    const pendientes = total - procesadas;
+
+    // Últimas actas subidas
+    const ultimasSubidas = await prisma.actafisica.findMany({
+      take: 5,
+      orderBy: {
+        fechasubida: 'desc'
+      },
+      select: {
+        id: true,
+        numero: true,
+        estado: true,
+        fechasubida: true,
+        aniolectivo: {
+          select: { anio: true }
+        },
+        grado: {
+          select: { nombre: true }
+        }
+      }
+    });
+
+    return {
+      resumen: {
+        total,
+        procesadas,
+        pendientes,
+        porcentajeProcesado: total > 0 ? Math.round((procesadas / total) * 100) : 0
+      },
+      porEstado: porEstado.map(e => ({
+        estado: e.estado,
+        cantidad: e._count.id
+      })),
+      porAnio: aniosDetalle.sort((a, b) => (a.anio || 0) - (b.anio || 0)),
+      porGrado: porGrado.map(g => ({
+        gradoId: g.grado_id,
+        cantidad: g._count.id
+      })),
+      ultimasSubidas
+    };
   }
 }
 

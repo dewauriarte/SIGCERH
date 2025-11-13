@@ -26,6 +26,7 @@ import areasCurricularesRoutes from './modules/areas-curriculares/areas-curricul
 import nivelesEducativosRoutes from './modules/niveles-educativos/niveles-educativos.routes.js';
 import academicoRoutes from './modules/academico/academico.routes.js';
 import actasRoutes from './modules/actas/actas-fisicas.routes.js';
+import normalizacionRoutes from './modules/actas/normalizacion.routes.js';
 import solicitudRoutes from './modules/solicitudes/solicitud.routes.js';
 import solicitudesPublicasRoutes from './modules/solicitudes/solicitud.public.routes.js';
 import pagoRoutes from './modules/pagos/pago.routes.js';
@@ -128,6 +129,7 @@ app.use('/api/areas-curriculares', areasCurricularesRoutes);
 app.use('/api/niveles-educativos', nivelesEducativosRoutes);
 app.use('/api/academico', academicoRoutes);
 app.use('/api/actas', actasRoutes);
+app.use('/api/actas', normalizacionRoutes); // Rutas de normalización de actas
 app.use('/api/solicitudes', solicitudRoutes);
 app.use('/api/pagos', pagoRoutes);
 app.use('/api/certificados', certificadoRoutes);

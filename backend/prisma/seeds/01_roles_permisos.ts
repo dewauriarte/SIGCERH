@@ -1,6 +1,6 @@
 /**
  * Seed para roles y permisos del sistema
- * Crea los 7 roles del sistema con sus permisos granulares
+ * Sistema simplificado con 4 roles
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -8,7 +8,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 /**
- * 7 Roles del sistema
+ * 4 Roles del sistema (simplificado)
  */
 const ROLES = [
   {
@@ -26,26 +26,8 @@ const ROLES = [
   {
     codigo: 'EDITOR',
     nombre: 'Editor',
-    descripcion: 'Personal que edita y genera certificados',
+    descripcion: 'Personal que edita y genera certificados (ahora incluye todas las funciones)',
     nivel: 3,
-  },
-  {
-    codigo: 'ENCARGADO_UGEL',
-    nombre: 'Encargado UGEL',
-    descripcion: 'Encargado de la UGEL que valida certificados',
-    nivel: 4,
-  },
-  {
-    codigo: 'ENCARGADO_SIAGEC',
-    nombre: 'Encargado SIAGEC',
-    descripcion: 'Encargado del sistema SIAGEC',
-    nivel: 5,
-  },
-  {
-    codigo: 'DIRECCION',
-    nombre: 'Dirección',
-    descripcion: 'Director que firma certificados',
-    nivel: 6,
   },
   {
     codigo: 'ADMIN',
@@ -207,9 +189,14 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'SOLICITUDES_BUSCAR',
     'SOLICITUDES_GESTIONAR',
     'SOLICITUDES_PROCESAR',
+    'SOLICITUDES_VALIDAR',
+    'SOLICITUDES_REGISTRAR',
+    'SOLICITUDES_FIRMAR',
     'CERTIFICADOS_VER',
     'CERTIFICADOS_CREAR',
     'CERTIFICADOS_EDITAR',
+    'CERTIFICADOS_FIRMAR',
+    'CERTIFICADOS_ANULAR',
     'CERTIFICADOS_EXPORTAR',
     'ESTUDIANTES_VER',
     'ESTUDIANTES_CREAR',
@@ -231,82 +218,11 @@ const ASIGNACION_PERMISOS: Record<string, string[]> = {
     'ACTAS_EDITAR',
     'ACTAS_PROCESAR_OCR',
     'ACTAS_EXPORTAR',
-    'NOTIFICACIONES_VER',
-  ],
-  ENCARGADO_UGEL: [
-    'AUTH_LOGIN',
-    'AUTH_LOGOUT',
-    'AUTH_REFRESH',
-    'SOLICITUDES_VER',
-    'SOLICITUDES_EDITAR',
-    'SOLICITUDES_VALIDAR',
-    'SOLICITUDES_PROCESAR',
-    'CERTIFICADOS_VER',
-    'CERTIFICADOS_CREAR',
-    'CERTIFICADOS_EDITAR',
-    'CERTIFICADOS_ANULAR',
-    'CERTIFICADOS_EXPORTAR',
-    'ESTUDIANTES_VER',
-    'ESTUDIANTES_CREAR',
-    'ESTUDIANTES_EDITAR',
-    'ACTAS_VER',
-    'ACTAS_SUBIR',
-    'ACTAS_EDITAR',
-    'ACTAS_PROCESAR_OCR',
-    'ACTAS_EXPORTAR',
     'PAGOS_VER',
-    'PAGOS_VALIDAR',
-    'PAGOS_CONCILIAR',
     'CONFIG_VER',
     'AUDITORIA_VER',
     'NOTIFICACIONES_VER',
     'NOTIFICACIONES_ENVIAR',
-  ],
-  ENCARGADO_SIAGEC: [
-    'AUTH_LOGIN',
-    'AUTH_LOGOUT',
-    'AUTH_REFRESH',
-    'SOLICITUDES_VER',
-    'SOLICITUDES_EDITAR',
-    'SOLICITUDES_REGISTRAR',
-    'SOLICITUDES_PROCESAR',
-    'CERTIFICADOS_VER',
-    'CERTIFICADOS_CREAR',
-    'CERTIFICADOS_EDITAR',
-    'CERTIFICADOS_ANULAR',
-    'CERTIFICADOS_EXPORTAR',
-    'ESTUDIANTES_VER',
-    'ESTUDIANTES_CREAR',
-    'ESTUDIANTES_EDITAR',
-    'ACTAS_VER',
-    'ACTAS_SUBIR',
-    'ACTAS_EDITAR',
-    'ACTAS_PROCESAR_OCR',
-    'ACTAS_EXPORTAR',
-    'PAGOS_VER',
-    'CONFIG_VER',
-    'CONFIG_EDITAR',
-    'CONFIG_PARAMETROS',
-    'AUDITORIA_VER',
-    'AUDITORIA_EXPORTAR',
-    'NOTIFICACIONES_VER',
-    'NOTIFICACIONES_ENVIAR',
-  ],
-  DIRECCION: [
-    'AUTH_LOGIN',
-    'AUTH_LOGOUT',
-    'AUTH_REFRESH',
-    'SOLICITUDES_VER',
-    'SOLICITUDES_FIRMAR',
-    'CERTIFICADOS_VER',
-    'CERTIFICADOS_FIRMAR',
-    'CERTIFICADOS_ANULAR',
-    'CERTIFICADOS_EXPORTAR',
-    'ESTUDIANTES_VER',
-    'ACTAS_VER',
-    'PAGOS_VER',
-    'AUDITORIA_VER',
-    'NOTIFICACIONES_VER',
   ],
   ADMIN: PERMISOS.map(p => p.codigo), // ADMIN tiene todos los permisos
 };

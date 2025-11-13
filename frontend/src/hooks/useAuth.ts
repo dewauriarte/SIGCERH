@@ -178,9 +178,6 @@ export const useAuth = () => {
       PUBLICO: '/dashboard',
       MESA_DE_PARTES: '/dashboard',
       EDITOR: '/dashboard',
-      ENCARGADO_UGEL: '/dashboard',
-      ENCARGADO_SIAGEC: '/dashboard',
-      DIRECCION: '/dashboard',
       ADMIN: '/dashboard',
     };
 

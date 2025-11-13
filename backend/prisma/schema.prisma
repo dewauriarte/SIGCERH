@@ -9,48 +9,54 @@ datasource db {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model actafisica {
-  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  numero                String      @db.VarChar(50)
-  tipo                  String      @db.VarChar(30)
-  aniolectivo_id        String      @db.Uuid
-  grado_id              String      @db.Uuid
-  seccion               String?     @db.VarChar(10)
-  turno                 String?     @db.VarChar(20)
-  fechaemision          DateTime?   @db.Date
-  libro_id              String?     @db.Uuid
-  folio                 String?     @db.VarChar(50)
-  tipoevaluacion        String?     @db.VarChar(50)
-  colegiorigen          String?     @db.VarChar(255)
-  ubicacionfisica       String?     @db.VarChar(255)
-  nombrearchivo         String?     @db.VarChar(255)
+  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  numero                String            @db.VarChar(50)
+  tipo                  String            @db.VarChar(30)
+  aniolectivo_id        String            @db.Uuid
+  grado_id              String            @db.Uuid
+  fechaemision          DateTime?         @db.Date
+  folio                 String?           @db.VarChar(50)
+  nombrearchivo         String?           @db.VarChar(255)
   urlarchivo            String?
-  hasharchivo           String?     @db.VarChar(64)
-  estado                String?     @default("DISPONIBLE") @db.VarChar(30)
-  solicitud_id          String?     @db.Uuid
-  procesadoconia        Boolean?    @default(false)
-  fechaprocesamiento    DateTime?   @db.Timestamptz(6)
+  hasharchivo           String?           @db.VarChar(64)
+  procesadoconia        Boolean?          @default(false)
+  fechaprocesamiento    DateTime?         @db.Timestamptz(6)
   datosextraidosjson    Json?
   urlexcelexportado     String?
-  fechaexportacionexcel DateTime?   @db.Timestamptz(6)
+  fechaexportacionexcel DateTime?         @db.Timestamptz(6)
   observaciones         String?
-  usuariosubida_id      String?     @db.Uuid
-  fechasubida           DateTime?   @default(now()) @db.Timestamptz(6)
-  aniolectivo           aniolectivo @relation(fields: [aniolectivo_id], references: [id], onUpdate: NoAction, map: "fk_acta_anio")
-  grado                 grado       @relation(fields: [grado_id], references: [id], onUpdate: NoAction, map: "fk_acta_grado")
-  libro                 libro?      @relation(fields: [libro_id], references: [id], onUpdate: NoAction, map: "fk_acta_libro")
-  solicitud             solicitud?  @relation(fields: [solicitud_id], references: [id], onUpdate: NoAction, map: "fk_acta_solicitud")
-  usuario               usuario?    @relation(fields: [usuariosubida_id], references: [id], onUpdate: NoAction, map: "fk_acta_usuario")
+  usuariosubida_id      String?           @db.Uuid
+  fechasubida           DateTime?         @default(now()) @db.Timestamptz(6)
+  estado                String?           @default("DISPONIBLE") @db.VarChar(30)
+  seccion               String?           @db.VarChar(10)
+  solicitud_id          String?           @db.Uuid
+  tipoevaluacion        String?           @db.VarChar(50)
+  turno                 String?           @db.VarChar(20)
+  libro_id              String?           @db.Uuid
+  tamanoarchivo_kb      Int?
+  calidad_ocr           String?           @db.VarChar(20)
+  confianza_ia          Decimal?          @db.Decimal(5, 2)
+  normalizada           Boolean?          @default(false)
+  fecha_normalizacion   DateTime?         @db.Timestamptz(6)
+  aniolectivo           aniolectivo       @relation(fields: [aniolectivo_id], references: [id], onUpdate: NoAction, map: "fk_acta_anio")
+  grado                 grado             @relation(fields: [grado_id], references: [id], onUpdate: NoAction, map: "fk_acta_grado")
+  libro                 libro?            @relation(fields: [libro_id], references: [id], onUpdate: NoAction, map: "fk_acta_libro")
+  solicitud             solicitud?        @relation(fields: [solicitud_id], references: [id], onUpdate: NoAction, map: "fk_acta_solicitud")
+  usuario_subida        usuario?          @relation("acta_usuario_subida", fields: [usuariosubida_id], references: [id], onUpdate: NoAction, map: "fk_acta_usuario_subida")
+  estudiantes           actaestudiante[]
 
   @@unique([numero, aniolectivo_id])
+  @@index([libro_id], map: "idx_acta_libro")
   @@index([aniolectivo_id], map: "idx_acta_anio")
   @@index([grado_id], map: "idx_acta_grado")
-  @@index([hasharchivo], map: "idx_acta_hash")
   @@index([estado], map: "idx_acta_estado")
-  @@index([libro_id], map: "idx_acta_libro")
+  @@index([numero], map: "idx_acta_numero")
+  @@index([hasharchivo], map: "idx_acta_hash")
+  @@index([procesadoconia], map: "idx_acta_procesado")
   @@index([solicitud_id], map: "idx_acta_solicitud")
   @@index([datosextraidosjson], map: "idx_acta_json", type: Gin)
-  @@index([numero], map: "idx_acta_numero")
-  @@index([procesadoconia], map: "idx_acta_procesado")
+  @@index([normalizada], map: "idx_acta_normalizada")
+  @@index([procesadoconia, normalizada], map: "idx_acta_procesado_normalizada")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -83,6 +89,7 @@ model areacurricular {
   configuracioninstitucion configuracioninstitucion? @relation(fields: [institucion_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_area_institucion")
   certificadonota          certificadonota[]
   curriculogrado           curriculogrado[]
+  notasactas               actanota[]
 
   @@unique([institucion_id, codigo])
   @@index([institucion_id, codigo], map: "idx_area_inst_codigo")
@@ -322,6 +329,7 @@ model estudiante {
   certificado              certificado[]
   configuracioninstitucion configuracioninstitucion @relation(fields: [institucion_id], references: [id], onUpdate: NoAction, map: "fk_estudiante_institucion")
   solicitud                solicitud[]
+  actas_normalizadas       actaestudiante[]
 
   @@unique([institucion_id, dni])
   @@index([apellidopaterno, apellidomaterno], map: "idx_estudiante_apellidos")
@@ -365,12 +373,21 @@ model libro {
   observaciones            String?
   fecha_creacion           DateTime?                @default(now()) @db.Timestamptz(6)
   activo                   Boolean?                 @default(true)
-  
+  nivel_id                 String?                  @db.Uuid
+  nombre                   String?                  @db.VarChar(255)
+  tipo_acta                String?                  @db.VarChar(30)
+  folio_inicio             Int?                     @default(1)
+  folio_fin                Int?
+  folios_utilizados        Int?                     @default(0)
+  estante                  String?                  @db.VarChar(50)
+  seccion_archivo          String?                  @db.VarChar(50)
   actafisica               actafisica[]
   configuracioninstitucion configuracioninstitucion @relation(fields: [institucion_id], references: [id], onUpdate: NoAction, map: "fk_libro_institucion")
-  
+  niveleducativo           niveleducativo?          @relation(fields: [nivel_id], references: [id], onUpdate: NoAction, map: "fk_libro_nivel")
+
   @@unique([institucion_id, codigo])
   @@index([institucion_id], map: "idx_libro_institucion")
+  @@index([nivel_id], map: "idx_libro_nivel")
   @@index([estado], map: "idx_libro_estado")
 }
 
@@ -424,6 +441,7 @@ model niveleducativo {
   orden                    Int
   activo                   Boolean?                 @default(true)
   grado                    grado[]
+  libro                    libro[]
   configuracioninstitucion configuracioninstitucion @relation(fields: [institucion_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_nivel_institucion")
 
   @@unique([institucion_id, codigo])
@@ -605,9 +623,9 @@ model rolpermiso {
 model sesion {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   usuario_id      String    @db.Uuid
-  token           String    @unique @db.Text
+  token           String    @unique
   ip              String?   @db.VarChar(45)
-  useragent       String?   @db.Text
+  useragent       String?
   fechainicio     DateTime? @default(now()) @db.Timestamptz(6)
   fechaexpiracion DateTime  @db.Timestamptz(6)
   fechacierre     DateTime? @db.Timestamptz(6)
@@ -646,6 +664,7 @@ model solicitud {
   usuariofirma_id                                     String?              @db.Uuid
   usuarioentrega_id                                   String?              @db.Uuid
   fechaactualizacion                                  DateTime?            @default(now()) @db.Timestamptz(6)
+  actafisica                                          actafisica[]
   notificacion                                        notificacion[]
   certificado                                         certificado?         @relation(fields: [certificado_id], references: [id], onUpdate: NoAction, map: "fk_solicitud_certificado")
   usuario_solicitud_usuarioentrega_idTousuario        usuario?             @relation("solicitud_usuarioentrega_idTousuario", fields: [usuarioentrega_id], references: [id], onUpdate: NoAction, map: "fk_solicitud_entregador")
@@ -656,7 +675,6 @@ model solicitud {
   tiposolicitud                                       tiposolicitud        @relation(fields: [tiposolicitud_id], references: [id], onUpdate: NoAction, map: "fk_solicitud_tipo")
   usuario_solicitud_usuariosolicitud_idTousuario      usuario?             @relation("solicitud_usuariosolicitud_idTousuario", fields: [usuariosolicitud_id], references: [id], onUpdate: NoAction, map: "fk_solicitud_usuario")
   usuario_solicitud_usuariovalidacionpago_idTousuario usuario?             @relation("solicitud_usuariovalidacionpago_idTousuario", fields: [usuariovalidacionpago_id], references: [id], onUpdate: NoAction, map: "fk_solicitud_validador_pago")
-  actafisica                                          actafisica[]
   solicitudhistorial                                  solicitudhistorial[]
 
   @@index([certificado_id], map: "idx_solicitud_certificado")
@@ -722,7 +740,7 @@ model usuario {
   cambiarpassword                                                 Boolean?               @default(true)
   fechacreacion                                                   DateTime?              @default(now()) @db.Timestamptz(6)
   fechaactualizacion                                              DateTime?              @default(now()) @db.Timestamptz(6)
-  actafisica                                                      actafisica[]
+  actafisica_subida                                               actafisica[]           @relation("acta_usuario_subida")
   auditoria                                                       auditoria[]
   certificado_certificado_usuarioanulacion_idTousuario            certificado[]          @relation("certificado_usuarioanulacion_idTousuario")
   certificado_certificado_usuarioemision_idTousuario              certificado[]          @relation("certificado_usuarioemision_idTousuario")
@@ -800,4 +818,49 @@ model webhookpago {
   @@index([fecharecepcion(sort: Desc)], map: "idx_webhook_fecha")
   @@index([pago_id], map: "idx_webhook_pago")
   @@index([pasarela_id], map: "idx_webhook_pasarela")
+}
+
+// ====================================================
+// NORMALIZACIÓN DE ACTAS FÍSICAS
+// ====================================================
+
+/// Vínculo entre actas físicas y estudiantes (normalización de JSON OCR)
+model actaestudiante {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acta_id         String       @db.Uuid
+  estudiante_id   String       @db.Uuid
+  numero_orden    Int
+  situacion_final String?      @db.VarChar(50)
+  observaciones   String?
+  fecha_registro  DateTime     @default(now()) @db.Timestamptz(6)
+  actafisica      actafisica   @relation(fields: [acta_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_actaest_acta")
+  estudiante      estudiante   @relation(fields: [estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_actaest_estudiante")
+  notas           actanota[]
+
+  @@unique([acta_id, estudiante_id], map: "uq_actaest_acta_estudiante")
+  @@unique([acta_id, numero_orden], map: "uq_actaest_acta_orden")
+  @@index([acta_id], map: "idx_actaest_acta")
+  @@index([estudiante_id], map: "idx_actaest_estudiante")
+  @@index([acta_id, numero_orden], map: "idx_actaest_orden")
+}
+
+/// Notas individuales normalizadas extraídas de actas físicas
+model actanota {
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acta_estudiante_id String         @db.Uuid
+  area_id            String         @db.Uuid
+  nota               Int?
+  nota_literal       String?        @db.VarChar(50)
+  es_exonerado       Boolean?       @default(false)
+  nombre_area_ocr    String?        @db.VarChar(150)
+  confianza_ocr      Decimal?       @db.Decimal(5, 2)
+  orden              Int
+  fecha_registro     DateTime       @default(now()) @db.Timestamptz(6)
+  actaestudiante     actaestudiante @relation(fields: [acta_estudiante_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_actanota_actaest")
+  areacurricular     areacurricular @relation(fields: [area_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "fk_actanota_area")
+
+  @@unique([acta_estudiante_id, area_id], map: "uq_actanota_actaest_area")
+  @@index([acta_estudiante_id], map: "idx_actanota_actaest")
+  @@index([area_id], map: "idx_actanota_area")
+  @@index([acta_estudiante_id, orden], map: "idx_actanota_orden")
 }

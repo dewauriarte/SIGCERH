@@ -13,10 +13,6 @@ export type StatusType =
   | 'ACTA_NO_ENCONTRADA'
   | 'PAGO_VALIDADO'
   | 'EN_PROCESAMIENTO_OCR'
-  | 'EN_VALIDACION_UGEL'
-  | 'OBSERVADO_POR_UGEL'
-  | 'EN_REGISTRO_SIAGEC'
-  | 'EN_FIRMA_DIRECCION'
   | 'CERTIFICADO_EMITIDO'
   | 'ENTREGADO';
 
@@ -57,29 +53,9 @@ const statusConfig: Record<string, { label: string; variant: string; className: 
     className: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
   },
   EN_PROCESAMIENTO_OCR: {
-    label: 'En procesamiento OCR',
+    label: 'En procesamiento',
     variant: 'default',
     className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
-  },
-  EN_VALIDACION_UGEL: {
-    label: 'En validación UGEL',
-    variant: 'default',
-    className: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400',
-  },
-  OBSERVADO_POR_UGEL: {
-    label: 'Observado por UGEL',
-    variant: 'destructive',
-    className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-  },
-  EN_REGISTRO_SIAGEC: {
-    label: 'En registro SIAGEC',
-    variant: 'default',
-    className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400',
-  },
-  EN_FIRMA_DIRECCION: {
-    label: 'En firma dirección',
-    variant: 'default',
-    className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/20 dark:text-violet-400',
   },
   CERTIFICADO_EMITIDO: {
     label: 'Certificado emitido',

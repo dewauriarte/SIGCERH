@@ -21,6 +21,17 @@ router.use(authenticate);
 router.get('/activos', estudiantesController.getActivos.bind(estudiantesController));
 
 /**
+ * GET /api/estudiantes/buscar-nombre
+ * Buscar estudiantes por nombre completo
+ * Permisos: ESTUDIANTES_VER
+ */
+router.get(
+  '/buscar-nombre',
+  requirePermission(['ESTUDIANTES_VER']),
+  estudiantesController.buscarPorNombre.bind(estudiantesController)
+);
+
+/**
  * GET /api/estudiantes
  * Listar estudiantes con filtros
  * Permisos: ESTUDIANTES_VER
@@ -62,6 +73,28 @@ router.put(
   '/:id',
   requirePermission(['ESTUDIANTES_EDITAR']),
   estudiantesController.update.bind(estudiantesController)
+);
+
+/**
+ * PUT /api/estudiantes/:id/actualizar-dni
+ * Actualizar DNI de estudiante (de temporal a real)
+ * Permisos: ESTUDIANTES_EDITAR
+ */
+router.put(
+  '/:id/actualizar-dni',
+  requirePermission(['ESTUDIANTES_EDITAR']),
+  estudiantesController.actualizarDNI.bind(estudiantesController)
+);
+
+/**
+ * GET /api/estudiantes/:id/actas-certificado
+ * Obtener actas consolidadas para generar certificado
+ * Permisos: ESTUDIANTES_VER
+ */
+router.get(
+  '/:id/actas-certificado',
+  requirePermission(['ESTUDIANTES_VER']),
+  estudiantesController.getActasParaCertificado.bind(estudiantesController)
 );
 
 /**

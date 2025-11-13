@@ -1,11 +1,12 @@
 /**
  * Tipos, enums e interfaces para el módulo de solicitudes
  * Sistema de Certificados Históricos 1985-2012
+ * ACTUALIZADO: Flujo simplificado con 4 roles (PUBLICO, MESA_DE_PARTES, EDITOR, ADMIN)
  */
 
 /**
- * 13 Estados del ciclo de vida de una solicitud
- * Basado en FLUJO_COMPLETO_SISTEMA_CERTIFICADOS_1985-2012.md
+ * 9 Estados del ciclo de vida de una solicitud (simplificado)
+ * Se eliminaron estados relacionados con UGEL, SIAGEC y DIRECCIÓN
  */
 export enum EstadoSolicitud {
   REGISTRADA = 'REGISTRADA',
@@ -16,10 +17,6 @@ export enum EstadoSolicitud {
   LISTO_PARA_OCR = 'LISTO_PARA_OCR', // ✅ Después de pago validado
   PAGO_VALIDADO = 'PAGO_VALIDADO', // Deprecated - mantener por compatibilidad
   EN_PROCESAMIENTO_OCR = 'EN_PROCESAMIENTO_OCR',
-  EN_VALIDACION_UGEL = 'EN_VALIDACION_UGEL',
-  OBSERVADO_POR_UGEL = 'OBSERVADO_POR_UGEL',
-  EN_REGISTRO_SIAGEC = 'EN_REGISTRO_SIAGEC',
-  EN_FIRMA_DIRECCION = 'EN_FIRMA_DIRECCION',
   CERTIFICADO_EMITIDO = 'CERTIFICADO_EMITIDO',
   ENTREGADO = 'ENTREGADO',
 }
@@ -42,16 +39,13 @@ export enum Prioridad {
 }
 
 /**
- * Roles que pueden ejecutar transiciones
+ * Roles que pueden ejecutar transiciones (simplificado a 4 roles)
  */
 export enum RolSolicitud {
   SISTEMA = 'SISTEMA', // Transiciones automáticas
   PUBLICO = 'PUBLICO',
   MESA_DE_PARTES = 'MESA_DE_PARTES',
   EDITOR = 'EDITOR',
-  UGEL = 'UGEL',
-  SIAGEC = 'SIAGEC',
-  DIRECCION = 'DIRECCION',
   ADMIN = 'ADMIN',
 }
 
@@ -66,8 +60,9 @@ export interface TransicionConfig {
 }
 
 /**
- * Mapa de transiciones válidas por estado
+ * Mapa de transiciones válidas por estado (simplificado)
  * Define qué transiciones son permitidas desde cada estado y quién puede ejecutarlas
+ * Flujo simplificado: El EDITOR ahora completa todo el proceso hasta emitir certificado
  */
 export const TRANSICIONES_VALIDAS: Record<
   EstadoSolicitud,
@@ -80,7 +75,7 @@ export const TRANSICIONES_VALIDAS: Record<
   },
   [EstadoSolicitud.DERIVADO_A_EDITOR]: {
     nextStates: [EstadoSolicitud.EN_BUSQUEDA],
-    roles: [RolSolicitud.EDITOR],
+    roles: [RolSolicitud.EDITOR, RolSolicitud.ADMIN],
     description: 'Editor inicia búsqueda de acta física',
   },
   [EstadoSolicitud.EN_BUSQUEDA]: {
@@ -88,7 +83,7 @@ export const TRANSICIONES_VALIDAS: Record<
       EstadoSolicitud.ACTA_ENCONTRADA_PENDIENTE_PAGO,
       EstadoSolicitud.ACTA_NO_ENCONTRADA,
     ],
-    roles: [RolSolicitud.EDITOR],
+    roles: [RolSolicitud.EDITOR, RolSolicitud.ADMIN],
     description: 'Editor marca acta como encontrada o no encontrada',
   },
   [EstadoSolicitud.ACTA_ENCONTRADA_PENDIENTE_PAGO]: {
@@ -100,7 +95,7 @@ export const TRANSICIONES_VALIDAS: Record<
   },
   [EstadoSolicitud.LISTO_PARA_OCR]: {
     nextStates: [EstadoSolicitud.EN_PROCESAMIENTO_OCR],
-    roles: [RolSolicitud.EDITOR],
+    roles: [RolSolicitud.EDITOR, RolSolicitud.ADMIN],
     description: 'Pago validado - Editor puede subir acta física para OCR',
   },
   [EstadoSolicitud.ACTA_NO_ENCONTRADA]: {
@@ -110,43 +105,19 @@ export const TRANSICIONES_VALIDAS: Record<
   },
   [EstadoSolicitud.PAGO_VALIDADO]: {
     nextStates: [EstadoSolicitud.EN_PROCESAMIENTO_OCR],
-    roles: [RolSolicitud.EDITOR],
+    roles: [RolSolicitud.EDITOR, RolSolicitud.ADMIN],
     description: 'Editor inicia procesamiento con OCR',
   },
   [EstadoSolicitud.EN_PROCESAMIENTO_OCR]: {
-    nextStates: [EstadoSolicitud.EN_VALIDACION_UGEL],
-    roles: [RolSolicitud.EDITOR],
-    description: 'Editor envía a validación de UGEL',
-  },
-  [EstadoSolicitud.EN_VALIDACION_UGEL]: {
-    nextStates: [
-      EstadoSolicitud.EN_REGISTRO_SIAGEC,
-      EstadoSolicitud.OBSERVADO_POR_UGEL,
-    ],
-    roles: [RolSolicitud.UGEL],
-    description: 'UGEL aprueba o observa el certificado',
-  },
-  [EstadoSolicitud.OBSERVADO_POR_UGEL]: {
-    nextStates: [EstadoSolicitud.EN_VALIDACION_UGEL],
-    roles: [RolSolicitud.EDITOR],
-    description: 'Editor corrige observaciones y reenvía a UGEL',
-  },
-  [EstadoSolicitud.EN_REGISTRO_SIAGEC]: {
-    nextStates: [EstadoSolicitud.EN_FIRMA_DIRECCION],
-    roles: [RolSolicitud.SIAGEC],
-    requiresData: ['codigoQR', 'codigoVirtual'],
-    description: 'SIAGEC registra y genera códigos de verificación',
-  },
-  [EstadoSolicitud.EN_FIRMA_DIRECCION]: {
     nextStates: [EstadoSolicitud.CERTIFICADO_EMITIDO],
-    roles: [RolSolicitud.DIRECCION],
-    description: 'Dirección firma el certificado (digital o física)',
+    roles: [RolSolicitud.EDITOR, RolSolicitud.ADMIN],
+    description: 'Editor completa el certificado y lo emite',
   },
   [EstadoSolicitud.CERTIFICADO_EMITIDO]: {
     nextStates: [EstadoSolicitud.ENTREGADO],
     roles: [RolSolicitud.SISTEMA, RolSolicitud.MESA_DE_PARTES],
     description:
-      'Usuario descarga (automático) o retira en UGEL (Mesa de Partes)',
+      'Usuario descarga (automático) o retira en oficina (Mesa de Partes)',
   },
   [EstadoSolicitud.ENTREGADO]: {
     nextStates: [], // Estado final - proceso exitoso

@@ -1,0 +1,225 @@
+// ====================================================
+// MODELOS PARA NORMALIZACIÓN DE ACTAS
+// Agregar al archivo schema.prisma principal
+// ====================================================
+
+// ====================================================
+// MODELO: ActaEstudiante
+// Vínculo entre Acta Física y Estudiante
+// ====================================================
+model ActaEstudiante {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acta_id         String   @db.Uuid
+  estudiante_id   String   @db.Uuid
+
+  // Datos específicos del estudiante en esta acta
+  numero_orden    Int
+  situacion_final String?  @db.VarChar(50)
+  observaciones   String?
+
+  // Auditoría
+  fecha_registro  DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relaciones
+  actafisica      ActaFisica @relation(fields: [acta_id], references: [id], onDelete: Cascade)
+  estudiante      Estudiante @relation(fields: [estudiante_id], references: [id], onDelete: Cascade)
+  notas           ActaNota[]
+
+  // Constraints
+  @@unique([acta_id, estudiante_id])
+  @@unique([acta_id, numero_orden])
+  @@index([acta_id])
+  @@index([estudiante_id])
+  @@index([acta_id, numero_orden])
+  @@map("actaestudiante")
+}
+
+// ====================================================
+// MODELO: ActaNota
+// Notas individuales normalizadas
+// ====================================================
+model ActaNota {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  acta_estudiante_id String   @db.Uuid
+  area_id            String   @db.Uuid
+
+  // Calificación
+  nota               Int?     @db.Integer
+  nota_literal       String?  @db.VarChar(50)
+  es_exonerado       Boolean  @default(false)
+
+  // Trazabilidad OCR (para auditoría)
+  nombre_area_ocr    String?  @db.VarChar(150)
+  confianza_ocr      Decimal? @db.Decimal(5, 2)
+
+  // Orden
+  orden              Int
+
+  // Auditoría
+  fecha_registro     DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relaciones
+  actaEstudiante     ActaEstudiante @relation(fields: [acta_estudiante_id], references: [id], onDelete: Cascade)
+  areaCurricular     AreaCurricular @relation(fields: [area_id], references: [id], onDelete: Restrict)
+
+  // Constraints
+  @@unique([acta_estudiante_id, area_id])
+  @@index([acta_estudiante_id])
+  @@index([area_id])
+  @@index([acta_estudiante_id, orden])
+  @@map("actanota")
+}
+
+// ====================================================
+// ACTUALIZACIÓN: ActaFisica (agregar campos)
+// ====================================================
+// IMPORTANTE: Agregar estos campos al modelo ActaFisica existente:
+
+model ActaFisica {
+  // ... campos existentes ...
+
+  // ✅ NUEVOS CAMPOS para normalización
+  normalizada         Boolean?  @default(false)
+  fecha_normalizacion DateTime? @db.Timestamptz(6)
+
+  // ✅ NUEVA RELACIÓN con estudiantes normalizados
+  estudiantes         ActaEstudiante[]
+
+  // ... resto de campos y relaciones existentes ...
+
+  // ✅ NUEVO ÍNDICE
+  @@index([normalizada])
+  @@index([procesadoconia, normalizada])
+}
+
+// ====================================================
+// ACTUALIZACIÓN: Estudiante (agregar relación)
+// ====================================================
+// IMPORTANTE: Agregar esta relación al modelo Estudiante existente:
+
+model Estudiante {
+  // ... campos existentes ...
+
+  // ✅ NUEVA RELACIÓN con actas normalizadas
+  actas_normalizadas  ActaEstudiante[]
+
+  // ... resto de campos y relaciones existentes ...
+}
+
+// ====================================================
+// ACTUALIZACIÓN: AreaCurricular (agregar relación)
+// ====================================================
+// IMPORTANTE: Agregar esta relación al modelo AreaCurricular existente:
+
+model AreaCurricular {
+  // ... campos existentes ...
+
+  // ✅ NUEVA RELACIÓN con notas de actas
+  notasActas          ActaNota[]
+
+  // ... resto de campos y relaciones existentes ...
+}
+
+// ====================================================
+// INSTRUCCIONES DE INTEGRACIÓN
+// ====================================================
+
+/**
+ * PASO 1: Integrar modelos al schema.prisma principal
+ *
+ * 1. Copiar modelos ActaEstudiante y ActaNota completos
+ * 2. Agregar campos nuevos a ActaFisica:
+ *    - normalizada
+ *    - fecha_normalizacion
+ *    - estudiantes (relación)
+ * 3. Agregar relación a Estudiante:
+ *    - actas_normalizadas
+ * 4. Agregar relación a AreaCurricular:
+ *    - notasActas
+ *
+ * PASO 2: Generar y ejecutar migración
+ *
+ * ```bash
+ * cd backend
+ * npx prisma migrate dev --name add_acta_normalizacion
+ * npx prisma generate
+ * ```
+ *
+ * PASO 3: Ejecutar SQL adicional (funciones y vistas)
+ *
+ * ```bash
+ * psql -d certificados_db < migrations/add_acta_normalizacion.sql
+ * ```
+ *
+ * PASO 4: Verificar
+ *
+ * ```bash
+ * npx prisma db pull  # Verificar schema
+ * npx prisma studio   # Explorar datos
+ * ```
+ */
+
+// ====================================================
+// EJEMPLO DE USO
+// ====================================================
+
+/**
+ * // 1. Normalizar acta
+ * const resultado = await normalizacionService.normalizarActa(actaId);
+ *
+ * // 2. Consultar actas de un estudiante
+ * const actas = await prisma.actaEstudiante.findMany({
+ *   where: { estudiante_id: estudianteId },
+ *   include: {
+ *     actafisica: {
+ *       include: {
+ *         aniolectivo: true,
+ *         grado: true,
+ *         libro: true
+ *       }
+ *     },
+ *     notas: {
+ *       include: {
+ *         areaCurricular: true
+ *       }
+ *     }
+ *   }
+ * });
+ *
+ * // 3. Consolidar para certificado
+ * const consolidado = await normalizacionService
+ *   .consolidarNotasParaCertificado(estudianteId);
+ */
+
+// ====================================================
+// NOTAS IMPORTANTES
+// ====================================================
+
+/**
+ * ⚠️ CONSTRAINTS IMPORTANTES:
+ *
+ * 1. Un estudiante puede aparecer UNA VEZ por acta
+ *    @@unique([acta_id, estudiante_id])
+ *
+ * 2. El número de orden es único dentro del acta
+ *    @@unique([acta_id, numero_orden])
+ *
+ * 3. Una nota por área por estudiante en cada acta
+ *    @@unique([acta_estudiante_id, area_id])
+ *
+ * 4. DELETE CASCADE en ActaEstudiante y ActaNota
+ *    Si se elimina el acta, se eliminan los vínculos y notas
+ *
+ * 5. DELETE RESTRICT en AreaCurricular
+ *    No se puede eliminar un área si tiene notas asociadas
+ */
+
+/**
+ * 📊 ÍNDICES para rendimiento:
+ *
+ * - idx_actaest_acta: Buscar estudiantes de un acta
+ * - idx_actaest_estudiante: Buscar actas de un estudiante
+ * - idx_actanota_actaest: Buscar notas de un estudiante en acta
+ * - idx_actanota_area: Buscar notas por área curricular
+ * - idx_actafisica_normalizada: Filtrar actas normalizadas
+ */

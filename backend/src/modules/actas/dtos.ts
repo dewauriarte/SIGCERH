@@ -66,11 +66,6 @@ export const CreateActaFisicaDTO = z.object({
     .max(255, 'El colegio de origen no puede tener más de 255 caracteres')
     .optional(),
 
-  ubicacionFisica: z
-    .string()
-    .max(255, 'La ubicación física no puede tener más de 255 caracteres')
-    .optional(),
-
   observaciones: z.string().optional(),
 });
 
@@ -92,6 +87,16 @@ export const UpdateActaFisicaDTO = z.object({
         message: `Tipo debe ser uno de: ${Object.values(TipoActa).join(', ')}`,
       }),
     })
+    .optional(),
+
+  anioLectivoId: z
+    .string()
+    .uuid('El ID del año lectivo debe ser un UUID válido')
+    .optional(),
+
+  gradoId: z
+    .string()
+    .uuid('El ID del grado debe ser un UUID válido')
     .optional(),
 
   seccion: z
@@ -129,16 +134,6 @@ export const UpdateActaFisicaDTO = z.object({
     .max(50, 'El tipo de evaluación no puede tener más de 50 caracteres')
     .optional(),
 
-  colegioOrigen: z
-    .string()
-    .max(255, 'El colegio de origen no puede tener más de 255 caracteres')
-    .optional(),
-
-  ubicacionFisica: z
-    .string()
-    .max(255, 'La ubicación física no puede tener más de 255 caracteres')
-    .optional(),
-
   observaciones: z.string().optional(),
 
   // NOTA: No existe campo 'estadoFisico' en la BD
@@ -154,6 +149,7 @@ export const FiltrosActaDTO = z.object({
   estado: z.nativeEnum(EstadoActa).optional(),
   anioLectivoId: z.string().uuid().optional(),
   gradoId: z.string().uuid().optional(),
+  libroId: z.string().uuid().optional(),
   procesado: z.boolean().optional(),
   fechaDesde: z
     .string()

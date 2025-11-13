@@ -77,6 +77,18 @@ router.get(
 );
 
 /**
+ * DELETE /api/actas/:id
+ * Eliminar acta física
+ * Permiso: ACTAS_ELIMINAR (EDITOR, ADMIN)
+ */
+router.delete(
+  '/:id',
+  requirePermission(['ACTAS_ELIMINAR']),
+  auditarAccion('actafisica', (req) => req.params.id!),
+  actasFisicasController.delete.bind(actasFisicasController)
+);
+
+/**
  * PUT /api/actas/:id
  * Actualizar acta (ruta genérica)
  * Permiso: ACTAS_EDITAR (EDITOR)

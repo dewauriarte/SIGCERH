@@ -105,8 +105,6 @@ export class ActaFisicaService {
         libro_id: data.libroId,
         folio: data.folio,
         tipoevaluacion: data.tipoEvaluacion,
-        colegiorigen: data.colegioOrigen,
-        ubicacionfisica: data.ubicacionFisica,
         nombrearchivo: uploadedFile.filename,
         urlarchivo: uploadedFile.url,
         hasharchivo: uploadedFile.hash,
@@ -118,7 +116,7 @@ export class ActaFisicaService {
         aniolectivo: true,
         grado: true,
         libro: true,
-        usuario: {
+        usuario_subida: {
           select: {
             id: true,
             username: true,
@@ -154,6 +152,10 @@ export class ActaFisicaService {
       where.grado_id = filtros.gradoId;
     }
 
+    if (filtros.libroId) {
+      where.libro_id = filtros.libroId;
+    }
+
     if (filtros.procesado !== undefined) {
       where.procesadoconia = filtros.procesado;
     }
@@ -183,7 +185,11 @@ export class ActaFisicaService {
         take,
         include: {
           aniolectivo: true,
-          grado: true,
+          grado: {
+            include: {
+              niveleducativo: true,
+            },
+          },
           libro: true,
           solicitud: {
             select: {
@@ -192,7 +198,7 @@ export class ActaFisicaService {
               estado: true,
             },
           },
-          usuario: {
+          usuario_subida: {
             select: {
               id: true,
               username: true,
@@ -229,7 +235,11 @@ export class ActaFisicaService {
       where: { id },
       include: {
         aniolectivo: true,
-        grado: true,
+        grado: {
+          include: {
+            niveleducativo: true,
+          },
+        },
         libro: true,
         solicitud: {
           select: {
@@ -247,7 +257,7 @@ export class ActaFisicaService {
             },
           },
         },
-        usuario: {
+        usuario_subida: {
           select: {
             id: true,
             username: true,
@@ -276,7 +286,7 @@ export class ActaFisicaService {
       const actaDuplicada = await prisma.actafisica.findFirst({
         where: {
           numero: data.numero,
-          aniolectivo_id: acta.aniolectivo_id,
+          aniolectivo_id: data.anioLectivoId || acta.aniolectivo_id,
           id: { not: id },
         },
       });
@@ -293,19 +303,23 @@ export class ActaFisicaService {
       data: {
         numero: data.numero,
         tipo: data.tipo,
+        aniolectivo_id: data.anioLectivoId,
+        grado_id: data.gradoId,
         seccion: data.seccion,
         turno: data.turno,
         fechaemision: data.fechaEmision,
         libro_id: data.libroId,
         folio: data.folio,
         tipoevaluacion: data.tipoEvaluacion,
-        colegiorigen: data.colegioOrigen,
-        ubicacionfisica: data.ubicacionFisica,
         observaciones: data.observaciones,
       },
       include: {
         aniolectivo: true,
-        grado: true,
+        grado: {
+          include: {
+            niveleducativo: true,
+          },
+        },
         libro: true,
       },
     });
@@ -313,6 +327,26 @@ export class ActaFisicaService {
     logger.info(`Acta actualizada: ${actaActualizada.numero}`);
 
     return actaActualizada;
+  }
+
+  /**
+   * Eliminar acta física
+   */
+  async delete(id: string) {
+    const acta = await this.findById(id);
+
+    // Verificar si el acta está asignada a una solicitud
+    if (acta.solicitud_id) {
+      throw new Error('No se puede eliminar un acta asignada a una solicitud');
+    }
+
+    await prisma.actafisica.delete({
+      where: { id },
+    });
+
+    logger.info(`Acta eliminada: ${acta.numero} (ID: ${id})`);
+
+    return { success: true };
   }
 
   /**

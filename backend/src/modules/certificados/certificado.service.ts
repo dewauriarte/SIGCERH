@@ -11,10 +11,312 @@ import type {
   RectificarCertificadoDTOType,
   FiltrosCertificadoDTOType,
 } from './dtos';
+import { actasEstudianteService } from '@modules/estudiantes/actas.service';
 
 const prisma = new PrismaClient();
 
 export class CertificadoService {
+  /**
+   * Generar certificado completo desde actas normalizadas de un estudiante
+   * Este es el método principal que vincula actas → certificado → PDF
+   */
+  async generarDesdeActas(
+    estudianteId: string,
+    usuarioId: string,
+    opciones?: {
+      observaciones?: {
+        retiros?: string;
+        traslados?: string;
+        siagie?: string;
+        pruebasUbicacion?: string;
+        convalidacion?: string;
+        otros?: string;
+      };
+      lugarEmision?: string;
+    }
+  ) {
+    logger.info(`[CERTIFICADO] Iniciando generación de certificado para estudiante: ${estudianteId}`);
+
+    // 1. Obtener actas del estudiante
+    const datosActas = await actasEstudianteService.obtenerActasParaCertificado(estudianteId);
+
+    // 2. Validaciones
+    if (!datosActas.puede_generar_certificado) {
+      throw new Error('El estudiante no tiene actas disponibles para generar certificado');
+    }
+
+    if (datosActas.estudiante.tiene_dni_temporal) {
+      logger.warn(
+        `[CERTIFICADO] Estudiante ${estudianteId} tiene DNI temporal: ${datosActas.estudiante.dni}`
+      );
+      // Permitir generar certificado con DNI temporal, pero advertir
+    }
+
+    if (datosActas.total_actas === 0) {
+      throw new Error('El estudiante no tiene actas registradas');
+    }
+
+    logger.info(
+      `[CERTIFICADO] Estudiante: ${datosActas.estudiante.nombre_completo}, ` +
+        `Actas: ${datosActas.total_actas}, Grados: ${datosActas.grados_completos.join(', ')}`
+    );
+
+    // 3. Generar código virtual único y número de certificado
+    const codigoVirtual = await this.generarCodigoVirtual();
+    const numeroCertificado = await this.generarNumeroCertificado();
+    logger.debug(`[CERTIFICADO] Código virtual generado: ${codigoVirtual}`);
+    logger.debug(`[CERTIFICADO] Número de certificado: ${numeroCertificado}`);
+
+    // 4. Obtener datos del estudiante completo
+    const estudiante = await prisma.estudiante.findUnique({
+      where: { id: estudianteId },
+      include: {
+        configuracioninstitucion: true,
+      },
+    });
+
+    if (!estudiante) {
+      throw new Error('Estudiante no encontrado');
+    }
+
+    // 5. Determinar grados completados
+    const gradosCompletados = datosActas.grados_completos.map((g) => g.toString());
+
+    // 6. Crear certificado principal
+    const certificado = await prisma.certificado.create({
+      data: {
+        institucion_id: estudiante.institucion_id,
+        codigovirtual: codigoVirtual,
+        numero: numeroCertificado,
+        estudiante_id: estudianteId,
+        fechaemision: new Date(),
+        horaemision: new Date(),
+        lugaremision: opciones?.lugarEmision || 'PUNO',
+        gradoscompletados: gradosCompletados,
+        situacionfinal: 'APROBADO', // Se ajustará después según las notas
+        promediogeneral: 0, // Se calculará después
+        observacionretiros: opciones?.observaciones?.retiros,
+        observaciontraslados: opciones?.observaciones?.traslados,
+        observacionsiagie: opciones?.observaciones?.siagie,
+        observacionpruebasubicacion: opciones?.observaciones?.pruebasUbicacion,
+        observacionconvalidacion: opciones?.observaciones?.convalidacion,
+        observacionotros: opciones?.observaciones?.otros,
+        estado: EstadoCertificado.BORRADOR,
+        version: 1,
+        usuarioemision_id: usuarioId,
+      },
+    });
+
+    logger.info(`[CERTIFICADO] Certificado creado: ${certificado.id} | Número: ${numeroCertificado} | Código: ${codigoVirtual}`);
+
+    // 7. Crear detalles por cada grado
+    let ordenDetalle = 1;
+    let todasLasNotas: number[] = [];
+    let algunaNotaDesaprobada = false;
+
+    for (const [gradoNum, actaGrado] of Object.entries(datosActas.actas_por_grado)) {
+      logger.debug(`[CERTIFICADO] Procesando grado ${gradoNum}: ${actaGrado.grado}`);
+
+      // Buscar grado_id y aniolectivo_id desde la acta física
+      const actaFisica = await prisma.actafisica.findUnique({
+        where: { id: actaGrado.acta_id },
+        select: {
+          grado_id: true,
+          aniolectivo_id: true,
+        },
+      });
+
+      if (!actaFisica) {
+        logger.error(`[CERTIFICADO] Acta física no encontrada: ${actaGrado.acta_id}`);
+        continue;
+      }
+
+      // Crear detalle del grado
+      const detalle = await prisma.certificadodetalle.create({
+        data: {
+          certificado_id: certificado.id,
+          aniolectivo_id: actaFisica.aniolectivo_id,
+          grado_id: actaFisica.grado_id,
+          situacionfinal: actaGrado.situacion_final,
+          observaciones: null,
+          orden: ordenDetalle++,
+        },
+      });
+
+      logger.debug(`[CERTIFICADO] Detalle creado para grado ${gradoNum}`);
+
+      // Crear notas del grado
+      let ordenNota = 1;
+      for (const nota of actaGrado.notas) {
+        // Buscar área curricular por código
+        const area = await prisma.areacurricular.findFirst({
+          where: {
+            codigo: nota.codigo_area,
+            institucion_id: estudiante.institucion_id,
+          },
+        });
+
+        if (!area) {
+          logger.warn(
+            `[CERTIFICADO] Área curricular no encontrada: ${nota.codigo_area} (${nota.area})`
+          );
+          continue;
+        }
+
+        const esExonerado = nota.nota === null && nota.nota_literal?.toUpperCase() === 'EXO';
+
+        await prisma.certificadonota.create({
+          data: {
+            certificadodetalle_id: detalle.id,
+            area_id: area.id,
+            nota: nota.nota,
+            notaliteral: nota.nota_literal,
+            esexonerado: esExonerado,
+            orden: ordenNota++,
+          },
+        });
+
+        // Acumular notas para promedio general
+        if (nota.nota !== null && !esExonerado) {
+          todasLasNotas.push(nota.nota);
+          if (nota.nota < 11) {
+            algunaNotaDesaprobada = true;
+          }
+        }
+      }
+
+      logger.debug(`[CERTIFICADO] ${actaGrado.notas.length} notas creadas para grado ${gradoNum}`);
+    }
+
+    // 8. Calcular promedio general
+    const promedioGeneral =
+      todasLasNotas.length > 0
+        ? todasLasNotas.reduce((sum, n) => sum + n, 0) / todasLasNotas.length
+        : 0;
+    const promedioRedondeado = Math.round(promedioGeneral * 100) / 100;
+
+    // 9. Determinar situación final
+    const situacionFinal = algunaNotaDesaprobada ? 'DESAPROBADO' : 'APROBADO';
+
+    // 10. Actualizar certificado con promedio y situación
+    await prisma.certificado.update({
+      where: { id: certificado.id },
+      data: {
+        promediogeneral: promedioRedondeado,
+        situacionfinal: situacionFinal,
+      },
+    });
+
+    logger.info(
+      `[CERTIFICADO] Certificado ${certificado.id} completado. ` +
+        `Promedio: ${promedioRedondeado}, Situación: ${situacionFinal}`
+    );
+
+    // 11. Retornar certificado completo
+    const certificadoCompleto = await this.findById(certificado.id);
+
+    return {
+      certificado: certificadoCompleto,
+      codigoVirtual,
+      gradosProcesados: Object.keys(datosActas.actas_por_grado).length,
+      totalNotas: todasLasNotas.length,
+      promedio: promedioRedondeado,
+    };
+  }
+
+  /**
+   * Generar certificado completo con PDF incluido
+   * Combina generarDesdeActas + generarPDF
+   */
+  async generarCertificadoCompleto(
+    estudianteId: string,
+    usuarioId: string,
+    opciones?: {
+      observaciones?: {
+        retiros?: string;
+        traslados?: string;
+        siagie?: string;
+        pruebasUbicacion?: string;
+        convalidacion?: string;
+        otros?: string;
+      };
+      lugarEmision?: string;
+      generarPDF?: boolean;
+    }
+  ) {
+    logger.info(
+      `[CERTIFICADO] Generando certificado completo (con PDF) para estudiante: ${estudianteId}`
+    );
+
+    // 1. Generar certificado desde actas
+    const resultado = await this.generarDesdeActas(estudianteId, usuarioId, opciones);
+
+    // 2. Generar PDF (si se solicita)
+    let resultadoPDF;
+    if (opciones?.generarPDF !== false) {
+      // Importar dinámicamente para evitar dependencia circular
+      const { pdfService } = await import('./pdf.service');
+      resultadoPDF = await pdfService.generarPDF(resultado.certificado.id);
+
+      logger.info(`[CERTIFICADO] PDF generado: ${resultadoPDF.urlPdf}`);
+    }
+
+    // 3. Marcar como EMITIDO si tiene PDF
+    if (resultadoPDF) {
+      await prisma.certificado.update({
+        where: { id: resultado.certificado.id },
+        data: {
+          estado: EstadoCertificado.EMITIDO,
+        },
+      });
+    }
+
+    return {
+      ...resultado,
+      pdf: resultadoPDF,
+      estado: resultadoPDF ? EstadoCertificado.EMITIDO : EstadoCertificado.BORRADOR,
+    };
+  }
+
+  /**
+   * Generar número correlativo de certificado
+   * Formato: CERT-{AÑO}-{NÚMERO_SECUENCIAL}
+   * Ejemplo: CERT-2025-000001
+   */
+  private async generarNumeroCertificado(): Promise<string> {
+    const anio = new Date().getFullYear();
+
+    // Obtener el último certificado del año actual
+    const ultimoCertificado = await prisma.certificado.findFirst({
+      where: {
+        numero: {
+          startsWith: `CERT-${anio}-`,
+        },
+      },
+      orderBy: {
+        fechaemision: 'desc',
+      },
+      select: {
+        numero: true,
+      },
+    });
+
+    let numeroSecuencial = 1;
+
+    if (ultimoCertificado && ultimoCertificado.numero) {
+      // Extraer el número secuencial del último certificado
+      const partes = ultimoCertificado.numero.split('-');
+      if (partes.length === 3 && partes[2]) {
+        numeroSecuencial = parseInt(partes[2], 10) + 1;
+      }
+    }
+
+    // Formatear con 6 dígitos (000001, 000002, etc.)
+    const numeroFormateado = numeroSecuencial.toString().padStart(6, '0');
+
+    return `CERT-${anio}-${numeroFormateado}`;
+  }
+
   /**
    * Generar código virtual único (ABC1234)
    * 3 letras mayúsculas + 4 números

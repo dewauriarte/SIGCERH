@@ -62,12 +62,26 @@ export class ActasFisicasController {
    */
   async list(req: Request, res: Response): Promise<void> {
     try {
+      // Mapear estadoOCR a procesado booleano
+      let procesado: boolean | undefined = undefined;
+      if (req.query.estadoOCR) {
+        const estadoOCR = req.query.estadoOCR as string;
+        if (estadoOCR === 'COMPLETADO') {
+          procesado = true;
+        } else if (estadoOCR === 'PENDIENTE' || estadoOCR === 'PROCESANDO' || estadoOCR === 'ERROR') {
+          procesado = false;
+        }
+      } else if (req.query.procesado !== undefined) {
+        procesado = req.query.procesado === 'true';
+      }
+
       // Parsear filtros
       const filtros = FiltrosActaDTO.parse({
         estado: req.query.estado,
         anioLectivoId: req.query.anioLectivoId,
         gradoId: req.query.gradoId,
-        procesado: req.query.procesado === 'true' ? true : undefined,
+        libroId: req.query.libroId,
+        procesado,
         fechaDesde: req.query.fechaDesde,
         fechaHasta: req.query.fechaHasta,
         solicitudId: req.query.solicitudId,
@@ -125,6 +139,37 @@ export class ActasFisicasController {
       res.status(500).json({
         success: false,
         message: 'Error al obtener acta',
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/actas/:id
+   * Eliminar acta física
+   */
+  async delete(req: Request, res: Response): Promise<void> {
+    try {
+      const id = req.params.id!;
+      await actaFisicaService.delete(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Acta eliminada exitosamente',
+      });
+    } catch (error: any) {
+      logger.error('Error en delete acta:', error);
+
+      if (error.message === 'Acta no encontrada') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Error al eliminar acta',
       });
     }
   }

@@ -39,15 +39,12 @@ INSERT INTO niveleducativo (codigo, nombre, descripcion, orden, activo) VALUES
 
 \echo '✓ Niveles educativos creados'
 
--- 3. Roles del Sistema (7 roles)
+-- 3. Roles del Sistema (4 roles - simplificado)
 \echo 'Creando roles del sistema...'
 INSERT INTO rol (codigo, nombre, descripcion, nivel, activo) VALUES
 ('ADMIN', 'Administrador', 'Control total del sistema', 100, true),
-('DIRECCION', 'Dirección', 'Revisa y firma certificados', 90, true),
-('SIAGEC', 'SIAGEC', 'Registra en sistema oficial y genera QR', 80, true),
-('UGEL', 'UGEL', 'Valida oficialmente los certificados', 70, true),
-('EDITOR', 'Editor', 'Procesa OCR y busca actas físicas', 60, true),
-('MESA_PARTES', 'Mesa de Partes', 'Recibe y valida solicitudes', 50, true),
+('EDITOR', 'Editor', 'Procesa OCR, busca actas y emite certificados', 60, true),
+('MESA_DE_PARTES', 'Mesa de Partes', 'Recibe y valida solicitudes', 50, true),
 ('PUBLICO', 'Público', 'Usuario que solicita certificados', 10, true);
 
 \echo '✓ Roles creados'
@@ -77,30 +74,15 @@ INSERT INTO permiso (codigo, nombre, modulo, activo) VALUES
 INSERT INTO rolpermiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r CROSS JOIN permiso p WHERE r.codigo = 'ADMIN';
 
--- MESA_PARTES
+-- MESA_DE_PARTES
 INSERT INTO rolpermiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r CROSS JOIN permiso p
-WHERE r.codigo = 'MESA_PARTES' AND p.codigo IN ('SOL_VER', 'SOL_EDITAR', 'PAGO_VER', 'PAGO_VALIDAR');
+WHERE r.codigo = 'MESA_DE_PARTES' AND p.codigo IN ('SOL_VER', 'SOL_EDITAR', 'PAGO_VER', 'PAGO_VALIDAR');
 
--- EDITOR
+-- EDITOR (ahora con permisos extendidos)
 INSERT INTO rolpermiso (rol_id, permiso_id)
 SELECT r.id, p.id FROM rol r CROSS JOIN permiso p
-WHERE r.codigo = 'EDITOR' AND p.codigo IN ('SOL_VER', 'SOL_EDITAR');
-
--- UGEL
-INSERT INTO rolpermiso (rol_id, permiso_id)
-SELECT r.id, p.id FROM rol r CROSS JOIN permiso p
-WHERE r.codigo = 'UGEL' AND p.codigo IN ('SOL_VER', 'CERT_VER', 'CERT_GENERAR');
-
--- SIAGEC
-INSERT INTO rolpermiso (rol_id, permiso_id)
-SELECT r.id, p.id FROM rol r CROSS JOIN permiso p
-WHERE r.codigo = 'SIAGEC' AND p.codigo IN ('SOL_VER', 'CERT_VER', 'CERT_GENERAR');
-
--- DIRECCION
-INSERT INTO rolpermiso (rol_id, permiso_id)
-SELECT r.id, p.id FROM rol r CROSS JOIN permiso p
-WHERE r.codigo = 'DIRECCION' AND p.codigo IN ('SOL_VER', 'CERT_VER', 'CERT_FIRMAR');
+WHERE r.codigo = 'EDITOR' AND p.codigo IN ('SOL_VER', 'SOL_EDITAR', 'CERT_VER', 'CERT_GENERAR', 'CERT_FIRMAR', 'CONFIG_VER');
 
 -- PUBLICO
 INSERT INTO rolpermiso (rol_id, permiso_id)

@@ -34,15 +34,12 @@ import RevisarOCRPage from '@/pages/editor/RevisarOCRPage';
 import EnviarAUgelPage from '@/pages/editor/EnviarAUgelPage';
 import CertificadosObservadosPage from '@/pages/editor/CertificadosObservadosPage';
 import ActasFisicasPage from '@/pages/editor/ActasFisicasPage';
+import NormalizarActasPage from '@/pages/editor/NormalizarActasPage';
+import ValidarActaPage from '@/pages/editor/ValidarActaPage';
 
-// UGEL
-import DashboardUGELPage from '@/pages/ugel/DashboardUGELPage';
-import PendientesValidacionPage from '@/pages/ugel/PendientesValidacionPage';
-import ValidarCertificadoPage from '@/pages/ugel/ValidarCertificadoPage';
-import HistorialValidacionesPage from '@/pages/ugel/HistorialValidacionesPage';
-
-// SIAGEC
-import CertificadosPendientesRegistroPage from '@/pages/siagec/CertificadosPendientesRegistroPage';
+// Estudiantes
+import ActasEstudiantePage from '@/pages/estudiantes/ActasEstudiantePage';
+import HistorialAcademicoPage from '@/pages/estudiantes/HistorialAcademicoPage';
 
 // ADMIN
 import DashboardAdminPage from '@/pages/admin/DashboardAdminPage';
@@ -315,85 +312,43 @@ export const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          
-          // Rutas para ENCARGADO_UGEL
+
+          // Rutas de Normalización de Actas
           {
-            path: 'ugel',
+            path: 'editor/normalizar-actas',
             element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_UGEL', 'ADMIN']}>
-                <DashboardUGELPage />
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
+                <NormalizarActasPage />
               </ProtectedRoute>
             ),
           },
           {
-            path: 'ugel/pendientes',
+            path: 'editor/normalizar-actas/:id',
             element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_UGEL', 'ADMIN']}>
-                <PendientesValidacionPage />
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
+                <ValidarActaPage />
+              </ProtectedRoute>
+            ),
+          },
+
+          // Rutas de Estudiantes
+          {
+            path: 'estudiantes/:id/actas',
+            element: (
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
+                <ActasEstudiantePage />
               </ProtectedRoute>
             ),
           },
           {
-            path: 'ugel/validar/:id',
+            path: 'estudiantes/:id/historial',
             element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_UGEL', 'ADMIN']}>
-                <ValidarCertificadoPage />
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
+                <HistorialAcademicoPage />
               </ProtectedRoute>
             ),
           },
-          {
-            path: 'ugel/historial',
-            element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_UGEL', 'ADMIN']}>
-                <HistorialValidacionesPage />
-              </ProtectedRoute>
-            ),
-          },
-          
-          // Rutas para ENCARGADO_SIAGEC
-          {
-            path: 'siagec/pendientes-registro',
-            element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_SIAGEC', 'ADMIN']}>
-                <CertificadosPendientesRegistroPage />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'siagec/registrados',
-            element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_SIAGEC', 'ADMIN']}>
-                <div>Certificados Registrados (Por implementar)</div>
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'siagec/reportes',
-            element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_SIAGEC', 'ADMIN']}>
-                <div>Reportes SIAGEC (Por implementar)</div>
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'siagec/historial',
-            element: (
-              <ProtectedRoute requiredRole={['ENCARGADO_SIAGEC', 'ADMIN']}>
-                <div>Historial de Registros (Por implementar)</div>
-              </ProtectedRoute>
-            ),
-          },
-          
-          // Rutas para DIRECCION
-          {
-            path: 'firmar',
-            element: (
-              <ProtectedRoute requiredRole={['DIRECCION', 'ADMIN']}>
-                <div>Firma de Certificados (Por implementar)</div>
-              </ProtectedRoute>
-            ),
-          },
-          
+
           // Rutas para ADMIN
           {
             path: 'dashboard/admin',
@@ -438,7 +393,7 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard/libros',
             element: (
-              <ProtectedRoute requiredRole="ADMIN">
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
                 <LibrosPage />
               </ProtectedRoute>
             ),
@@ -446,7 +401,15 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard/estudiantes',
             element: (
-              <ProtectedRoute requiredRole="ADMIN">
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
+                <EstudiantesPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'admin/estudiantes',
+            element: (
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
                 <EstudiantesPage />
               </ProtectedRoute>
             ),
@@ -462,7 +425,7 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard/anios-lectivos',
             element: (
-              <ProtectedRoute requiredRole="ADMIN">
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
                 <AniosLectivosPage />
               </ProtectedRoute>
             ),
@@ -470,7 +433,7 @@ export const router = createBrowserRouter([
           {
             path: 'dashboard/areas-curriculares',
             element: (
-              <ProtectedRoute requiredRole="ADMIN">
+              <ProtectedRoute requiredRole={['EDITOR', 'ADMIN']}>
                 <AreasCurricularesPage />
               </ProtectedRoute>
             ),

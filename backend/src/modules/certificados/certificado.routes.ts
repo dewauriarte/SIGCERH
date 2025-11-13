@@ -81,6 +81,25 @@ router.get(
 
 /**
  * ========================================
+ * GENERACIÓN DE CERTIFICADOS
+ * ========================================
+ */
+
+/**
+ * POST /api/certificados/generar
+ * Generar certificado completo desde actas de un estudiante
+ * Incluye: certificado + detalles + notas + PDF
+ * Permisos: CERTIFICADOS_GENERAR
+ */
+router.post(
+  '/generar',
+  requirePermission(['CERTIFICADOS_GENERAR']),
+  auditarAccion('certificado', () => 'generar_nuevo'),
+  certificadoController.generar.bind(certificadoController)
+);
+
+/**
+ * ========================================
  * GENERACIÓN DE PDF
  * ========================================
  */

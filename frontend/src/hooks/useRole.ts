@@ -23,9 +23,6 @@ export function useRole() {
   const isPublico = userRoles.includes('PUBLICO');
   const isMesaDePartes = userRoles.includes('MESA_DE_PARTES');
   const isEditor = userRoles.includes('EDITOR');
-  const isEncargadoUgel = userRoles.includes('ENCARGADO_UGEL');
-  const isEncargadoSiagec = userRoles.includes('ENCARGADO_SIAGEC');
-  const isDireccion = userRoles.includes('DIRECCION');
   const isAdmin = userRoles.includes('ADMIN');
   
   /**
@@ -46,16 +43,15 @@ export function useRole() {
   const canManageUsers = isAdmin;
   const canValidatePayments = isMesaDePartes || isAdmin;
   const canProcessOCR = isEditor || isAdmin;
-  const canValidateCertificates = isEncargadoUgel || isAdmin;
-  const canRegisterDigitally = isEncargadoSiagec || isAdmin;
-  const canSignCertificates = isDireccion || isAdmin;
+  const canValidateCertificates = isEditor || isAdmin;
+  const canRegisterDigitally = isEditor || isAdmin;
+  const canSignCertificates = isEditor || isAdmin;
   const canViewAllSolicitudes = !isPublico || isAdmin;
   
   /**
    * Verifica si el usuario tiene al menos uno de los roles de staff
    */
-  const isStaff = isMesaDePartes || isEditor || isEncargadoUgel || 
-                  isEncargadoSiagec || isDireccion || isAdmin;
+  const isStaff = isMesaDePartes || isEditor || isAdmin;
   
   return {
     // Información del rol
@@ -68,9 +64,6 @@ export function useRole() {
     isPublico,
     isMesaDePartes,
     isEditor,
-    isEncargadoUgel,
-    isEncargadoSiagec,
-    isDireccion,
     isAdmin,
     isStaff,
     

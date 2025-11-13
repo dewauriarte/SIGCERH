@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import { estudiantesService } from './estudiantes.service';
+import { actasEstudianteService } from './actas.service';
 import { logger } from '@config/logger';
 import { CreateEstudianteDTO, UpdateEstudianteDTO, FiltrosEstudianteDTO } from './dtos';
 
@@ -198,6 +199,116 @@ export class EstudiantesController {
       res.status(400).json({
         success: false,
         message: error.message || 'Error al eliminar estudiante',
+      });
+    }
+  }
+
+  /**
+   * PUT /api/estudiantes/:id/actualizar-dni
+   * Actualizar DNI de estudiante (de temporal a real)
+   */
+  async actualizarDNI(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { dni, fusionarDuplicados = false } = req.body;
+
+      if (!dni) {
+        return res.status(400).json({
+          success: false,
+          message: 'DNI es requerido',
+        });
+      }
+
+      await actasEstudianteService.actualizarDNI(id, dni, fusionarDuplicados);
+
+      res.status(200).json({
+        success: true,
+        message: fusionarDuplicados 
+          ? 'DNI actualizado y estudiantes fusionados exitosamente'
+          : 'DNI actualizado exitosamente',
+      });
+    } catch (error: any) {
+      logger.error('Error en actualizarDNI:', error);
+
+      if (error.message?.includes('ya está registrado')) {
+        res.status(409).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Error al actualizar DNI',
+      });
+    }
+  }
+
+  /**
+   * GET /api/estudiantes/:id/actas-certificado
+   * Obtener todas las actas preparadas para generar certificado
+   */
+  async getActasParaCertificado(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+
+      const datos = await actasEstudianteService.obtenerActasParaCertificado(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Actas obtenidas correctamente',
+        data: datos,
+      });
+    } catch (error: any) {
+      logger.error('Error en getActasParaCertificado:', error);
+
+      if (error.message === 'Estudiante no encontrado') {
+        res.status(404).json({
+          success: false,
+          message: error.message,
+        });
+        return;
+      }
+
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Error al obtener actas para certificado',
+      });
+    }
+  }
+
+  /**
+   * GET /api/estudiantes/buscar-nombre
+   * Buscar estudiantes por nombre completo
+   */
+  async buscarPorNombre(req: Request, res: Response) {
+    try {
+      const { apellidoPaterno, apellidoMaterno, nombres } = req.query;
+
+      if (!apellidoPaterno || !apellidoMaterno || !nombres) {
+        return res.status(400).json({
+          success: false,
+          message: 'Se requieren apellidoPaterno, apellidoMaterno y nombres',
+        });
+      }
+
+      const estudiantes = await actasEstudianteService.buscarPorNombre(
+        apellidoPaterno as string,
+        apellidoMaterno as string,
+        nombres as string
+      );
+
+      res.status(200).json({
+        success: true,
+        message: `${estudiantes.length} estudiante(s) encontrado(s)`,
+        data: estudiantes,
+      });
+    } catch (error: any) {
+      logger.error('Error en buscarPorNombre:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Error al buscar estudiantes',
       });
     }
   }

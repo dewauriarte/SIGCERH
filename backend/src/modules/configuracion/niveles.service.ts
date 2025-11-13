@@ -153,26 +153,40 @@ export class NivelesService {
   }
 
   /**
-   * Eliminar un nivel educativo (soft delete)
+   * Eliminar un nivel educativo
+   * Verifica que no tenga grados asociados antes de eliminar
    */
   async delete(id: string) {
     const nivel = await prisma.niveleducativo.findUnique({
       where: { id },
+      include: {
+        _count: {
+          select: {
+            grado: true,
+          },
+        },
+      },
     });
 
     if (!nivel) {
       throw new Error('Nivel educativo no encontrado');
     }
 
-    // Soft delete - solo desactivar
-    await prisma.niveleducativo.update({
+    // Verificar si tiene grados asociados
+    if (nivel._count.grado > 0) {
+      throw new Error(
+        `No se puede eliminar el nivel educativo porque tiene ${nivel._count.grado} grado${
+          nivel._count.grado !== 1 ? 's' : ''
+        } asociado${nivel._count.grado !== 1 ? 's' : ''}. Elimine primero los grados o reasígnelos a otro nivel.`
+      );
+    }
+
+    // Eliminar el nivel (hard delete ya que no tiene dependencias)
+    await prisma.niveleducativo.delete({
       where: { id },
-      data: {
-        activo: false,
-      },
     });
 
-    logger.info(`Nivel educativo desactivado: ${nivel.nombre}`);
+    logger.info(`Nivel educativo eliminado: ${nivel.nombre}`);
   }
 }
 

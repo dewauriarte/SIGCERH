@@ -39,16 +39,14 @@ import {
 } from '@/components/ui/command';
 import { useState, useEffect } from 'react';
 
-// Importar layouts específicos por rol
+// Importar layouts específicos por rol (sistema simplificado con 4 roles)
 import MesaDePartesLayout from './MesaDePartesLayout';
 import EditorLayout from './EditorLayout';
-import UGELLayout from './UGELLayout';
-import SiagecLayout from './SiagecLayout';
 import AdminLayout from './AdminLayout';
 
 export default function ProtectedLayout() {
   const { isAuthenticated } = useAuth();
-  const { isMesaDePartes, isEditor, isEncargadoUgel, isEncargadoSiagec, isDireccion, isAdmin } = useRole();
+  const { isMesaDePartes, isEditor, isAdmin } = useRole();
 
   // El polling de sesión se ejecuta automáticamente en el hook useAuth
   // Esto verifica la sesión cada 30 segundos y hace logout automático si falla
@@ -64,19 +62,6 @@ export default function ProtectedLayout() {
 
   if (isEditor) {
     return <EditorLayout />;
-  }
-
-  if (isEncargadoUgel) {
-    return <UGELLayout />;
-  }
-
-  if (isEncargadoSiagec) {
-    return <SiagecLayout />;
-  }
-
-  if (isDireccion) {
-    // TODO: Implementar DireccionLayout (Sprint 9)
-    return <GenericProtectedLayout />;
   }
 
   if (isAdmin) {

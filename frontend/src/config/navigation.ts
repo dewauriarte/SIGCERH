@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Building2,
   BarChart3,
-  Database,
+  Database as DatabaseIcon,
   FileArchive,
   AlertTriangle,
   Brain,
@@ -29,9 +29,6 @@ export type UserRole =
   | 'PUBLICO'
   | 'MESA_DE_PARTES'
   | 'EDITOR'
-  | 'ENCARGADO_UGEL'
-  | 'ENCARGADO_SIAGEC'
-  | 'DIRECCION'
   | 'ADMIN';
 
 export interface NavItem {
@@ -128,6 +125,31 @@ export const navigationEditor: NavItem[] = [
     icon: Brain,
   },
   {
+    title: 'Normalizar Actas',
+    url: '/editor/normalizar-actas',
+    icon: DatabaseIcon,
+  },
+  {
+    title: 'Estudiantes',
+    url: '/dashboard/estudiantes',
+    icon: Users,
+  },
+  {
+    title: 'Libros de Actas',
+    url: '/dashboard/libros',
+    icon: BookOpen,
+  },
+  {
+    title: 'Años Lectivos',
+    url: '/dashboard/anios-lectivos',
+    icon: Calendar,
+  },
+  {
+    title: 'Áreas Curriculares',
+    url: '/dashboard/areas-curriculares',
+    icon: BookOpen,
+  },
+  {
     title: 'Actas Físicas',
     url: '/editor/actas',
     icon: FileText,
@@ -141,146 +163,6 @@ export const navigationEditor: NavItem[] = [
     title: 'Observados',
     url: '/certificados/observados',
     icon: AlertTriangle,
-  },
-];
-
-// ENCARGADO UGEL - Valida autenticidad
-export const navigationEncargadoUgel: NavItem[] = [
-  {
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: Home,
-    isActive: true,
-  },
-  {
-    title: 'Validación',
-    url: '/validacion',
-    icon: CheckCircle2,
-    items: [
-      { title: 'Pendientes de Validar', url: '/validacion/pendientes' },
-      { title: 'En Revisión', url: '/validacion/en-revision' },
-      { title: 'Aprobar', url: '/validacion/aprobar' },
-      { title: 'Observar', url: '/validacion/observar' },
-    ],
-  },
-  {
-    title: 'Certificados',
-    url: '/certificados',
-    icon: FileText,
-    items: [
-      { title: 'Aprobados', url: '/certificados/aprobados' },
-      { title: 'Observados', url: '/certificados/observados' },
-      { title: 'Historial', url: '/certificados/historial' },
-    ],
-  },
-  {
-    title: 'Archivo Histórico',
-    url: '/archivo-historico',
-    icon: Database,
-  },
-  {
-    title: 'Reportes',
-    url: '/reportes',
-    icon: BarChart3,
-  },
-  {
-    title: 'Configuración',
-    url: '/configuracion',
-    icon: Settings,
-  },
-];
-
-// ENCARGADO SIAGEC - Registra digitalmente
-export const navigationEncargadoSiagec: NavItem[] = [
-  {
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: Home,
-    isActive: true,
-  },
-  {
-    title: 'Registro Digital',
-    url: '/registro',
-    icon: Database,
-    items: [
-      { title: 'Pendientes de Registro', url: '/registro/pendientes' },
-      { title: 'Generar Códigos QR', url: '/registro/qr' },
-      { title: 'Validación Técnica', url: '/registro/validacion' },
-    ],
-  },
-  {
-    title: 'Certificados',
-    url: '/certificados',
-    icon: FileText,
-    items: [
-      { title: 'Registrados', url: '/certificados/registrados' },
-      { title: 'En Firma', url: '/certificados/en-firma' },
-      { title: 'Publicados', url: '/certificados/publicados' },
-    ],
-  },
-  {
-    title: 'Verificación',
-    url: '/verificacion',
-    icon: ShieldCheck,
-    items: [
-      { title: 'Consultas Públicas', url: '/verificacion/consultas' },
-      { title: 'Códigos Generados', url: '/verificacion/codigos' },
-    ],
-  },
-  {
-    title: 'Repositorio Digital',
-    url: '/repositorio',
-    icon: FileArchive,
-  },
-  {
-    title: 'Configuración',
-    url: '/configuracion',
-    icon: Settings,
-  },
-];
-
-// DIRECCION - Firma y autoriza
-export const navigationDireccion: NavItem[] = [
-  {
-    title: 'Dashboard',
-    url: '/dashboard',
-    icon: Home,
-    isActive: true,
-  },
-  {
-    title: 'Firma de Certificados',
-    url: '/firmar',
-    icon: PenTool,
-    items: [
-      { title: 'Pendientes de Firma', url: '/firmar/pendientes' },
-      { title: 'Firmar Digitalmente', url: '/firmar/digital' },
-      { title: 'Firmar Físicamente', url: '/firmar/fisica' },
-    ],
-  },
-  {
-    title: 'Certificados',
-    url: '/certificados',
-    icon: FileText,
-    items: [
-      { title: 'Firmados', url: '/certificados/firmados' },
-      { title: 'Observados', url: '/certificados/observados' },
-      { title: 'Historial', url: '/certificados/historial' },
-    ],
-  },
-  {
-    title: 'Reportes',
-    url: '/reportes',
-    icon: BarChart3,
-    items: [
-      { title: 'Estadísticas', url: '/reportes/estadisticas' },
-      { title: 'Métricas', url: '/reportes/metricas' },
-      { title: 'Auditoría', url: '/reportes/auditoria' },
-    ],
-  },
-  {
-    title: 'Configuración',
-    url: '/configuracion',
-    icon: Settings,
   },
 ];
 
@@ -303,19 +185,11 @@ export const navigationAdmin: NavItem[] = [
     icon: Shield,
   },
   {
-    title: 'Libros de Actas',
-    url: '/dashboard/libros',
-    icon: BookOpen,
-  },
-  {
     title: 'Configuración Académica',
     url: '/dashboard/config-academica',
     icon: GraduationCap,
     items: [
-      { title: 'Estudiantes', url: '/dashboard/estudiantes', icon: Users },
       { title: 'Grados', url: '/dashboard/grados', icon: GraduationCap },
-      { title: 'Años Lectivos', url: '/dashboard/anios-lectivos', icon: Calendar },
-      { title: 'Áreas Curriculares', url: '/dashboard/areas-curriculares', icon: BookOpen },
       { title: 'Niveles Educativos', url: '/dashboard/niveles-educativos', icon: Layers },
     ],
   },
@@ -337,7 +211,7 @@ export const navigationAdmin: NavItem[] = [
   {
     title: 'Base de Datos',
     url: '/dashboard/base-datos',
-    icon: Database,
+    icon: DatabaseIcon,
   },
 ];
 
@@ -350,12 +224,6 @@ export function getNavigationByRole(role: UserRole): NavItem[] {
       return navigationMesaDePartes;
     case 'EDITOR':
       return navigationEditor;
-    case 'ENCARGADO_UGEL':
-      return navigationEncargadoUgel;
-    case 'ENCARGADO_SIAGEC':
-      return navigationEncargadoSiagec;
-    case 'DIRECCION':
-      return navigationDireccion;
     case 'ADMIN':
       return navigationAdmin;
     default:
@@ -368,9 +236,6 @@ export const roleLabels: Record<UserRole, string> = {
   PUBLICO: 'Usuario Público',
   MESA_DE_PARTES: 'Mesa de Partes',
   EDITOR: 'Editor / Oficina de Actas',
-  ENCARGADO_UGEL: 'Encargado UGEL',
-  ENCARGADO_SIAGEC: 'Encargado SIAGEC',
-  DIRECCION: 'Dirección',
   ADMIN: 'Administrador',
 };
 

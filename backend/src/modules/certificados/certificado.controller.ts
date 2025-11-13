@@ -18,6 +18,58 @@ import type {
 
 class CertificadoController {
   /**
+   * POST /api/certificados/generar
+   * Generar certificado completo desde actas de un estudiante
+   * Incluye: certificado + detalles + notas + PDF
+   */
+  async generar(req: Request, res: Response): Promise<void> {
+    try {
+      const { estudianteId, observaciones, lugarEmision, generarPDF } = req.body;
+      const usuarioId = req.user?.id;
+
+      if (!usuarioId) {
+        res.status(401).json({
+          success: false,
+          message: 'Usuario no autenticado',
+        });
+        return;
+      }
+
+      if (!estudianteId) {
+        res.status(400).json({
+          success: false,
+          message: 'El campo estudianteId es requerido',
+        });
+        return;
+      }
+
+      logger.info(`[API] Generando certificado para estudiante ${estudianteId}`);
+
+      const resultado = await certificadoService.generarCertificadoCompleto(
+        estudianteId,
+        usuarioId,
+        {
+          observaciones,
+          lugarEmision,
+          generarPDF,
+        }
+      );
+
+      res.status(201).json({
+        success: true,
+        message: 'Certificado generado exitosamente',
+        data: resultado,
+      });
+    } catch (error: any) {
+      logger.error(`Error al generar certificado: ${error.message}`);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Error al generar certificado',
+      });
+    }
+  }
+
+  /**
    * GET /api/certificados
    * Listar certificados con filtros y paginación
    */

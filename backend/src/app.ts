@@ -42,8 +42,13 @@ const app: Application = express();
 // MIDDLEWARES DE SEGURIDAD
 // ============================================
 
-// Helmet - Headers de seguridad
-app.use(helmet());
+// Helmet - Headers de seguridad (configurado para permitir imágenes)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+  })
+);
 
 // CORS - Control de acceso
 app.use(

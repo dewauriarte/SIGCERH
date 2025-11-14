@@ -15,7 +15,8 @@
       "Bash(netstat:*)",
       "Bash(taskkill:*)",
       "Bash(taskkill /F /PID 31768)",
-      "Bash(python main.py)"
+      "Bash(python main.py)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

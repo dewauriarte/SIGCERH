@@ -59,6 +59,8 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { editorService } from '@/services/editor.service';
+import { notificacionService } from '@/services/notificacion.service';
+import { NotificacionesPanel } from './NotificacionesPanel';
 
 // ============================================================================
 // COMPONENTE PRINCIPAL
@@ -69,27 +71,18 @@ export function EditorTopbar() {
   const location = useLocation();
   const { setTheme } = useThemeStore();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [notificacionesOpen, setNotificacionesOpen] = useState(false);
 
   // ==========================================================================
   // QUERIES - Notificaciones y contadores
   // ==========================================================================
 
-  const { data: estadisticas } = useQuery({
-    queryKey: ['editor-stats-topbar'],
-    queryFn: () => editorService.getEstadisticas(),
-    refetchInterval: 30000,
-    enabled: false, // TODO: Habilitar cuando esté implementado el backend
+  // Obtener contador de notificaciones no leídas desde backend
+  const { data: contadorNoLeidas } = useQuery({
+    queryKey: ['notificaciones-contador'],
+    queryFn: () => notificacionService.contadorNoLeidas(),
+    refetchInterval: 30000, // 30 segundos
   });
-
-  const { data: expedientesPendientes } = useQuery({
-    queryKey: ['editor-expedientes-urgentes'],
-    queryFn: () => editorService.getExpedientesPendientes({ page: 1, limit: 1 }),
-    refetchInterval: 30000,
-    enabled: false, // TODO: Habilitar cuando esté implementado el backend
-  });
-
-  // Contador total de notificaciones
-  const totalNotificaciones = estadisticas?.data.expedientesAsignados || 0;
 
   // ==========================================================================
   // ATAJO DE TECLADO - Búsqueda (Cmd/Ctrl + K)
@@ -244,74 +237,29 @@ export function EditorTopbar() {
         </Dialog>
 
         {/* Notificaciones */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-[1.2rem] w-[1.2rem]" />
-              {totalNotificaciones > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
-                >
-                  {totalNotificaciones > 99 ? '99+' : totalNotificaciones}
-                </Badge>
-              )}
-              <span className="sr-only">Notificaciones</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notificaciones de Trabajo</DropdownMenuLabel>
-            <DropdownMenuSeparator />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          onClick={() => setNotificacionesOpen(true)}
+        >
+          <Bell className="h-[1.2rem] w-[1.2rem]" />
+          {(contadorNoLeidas || 0) > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-[10px]"
+            >
+              {(contadorNoLeidas || 0) > 99 ? '99+' : contadorNoLeidas}
+            </Badge>
+          )}
+          <span className="sr-only">Notificaciones</span>
+        </Button>
 
-            {/* Expedientes Urgentes */}
-            {expedientesPendientes?.meta.total ? (
-              <DropdownMenuItem onClick={() => navigate('/expedientes')}>
-                <AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Expedientes Urgentes</p>
-                  <p className="text-xs text-muted-foreground">
-                    {expedientesPendientes.meta.total} pendientes de búsqueda
-                  </p>
-                </div>
-                <Badge variant="destructive">{expedientesPendientes.meta.total}</Badge>
-              </DropdownMenuItem>
-            ) : null}
-
-            {/* Actas en OCR */}
-            {estadisticas?.data.procesadasConOCR ? (
-              <DropdownMenuItem onClick={() => navigate('/ocr')}>
-                <FileScan className="mr-2 h-4 w-4 text-purple-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Procesamiento OCR</p>
-                  <p className="text-xs text-muted-foreground">
-                    {estadisticas.data.procesadasConOCR} actas en proceso
-                  </p>
-                </div>
-                <Badge variant="secondary">{estadisticas.data.procesadasConOCR}</Badge>
-              </DropdownMenuItem>
-            ) : null}
-
-            {/* Observados por UGEL */}
-            {estadisticas?.data.observadosPorUgel ? (
-              <DropdownMenuItem onClick={() => navigate('/certificados/observados')}>
-                <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Observados por UGEL</p>
-                  <p className="text-xs text-muted-foreground">
-                    {estadisticas.data.observadosPorUgel} requieren corrección
-                  </p>
-                </div>
-                <Badge variant="destructive">{estadisticas.data.observadosPorUgel}</Badge>
-              </DropdownMenuItem>
-            ) : null}
-
-            {totalNotificaciones === 0 && (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                No hay notificaciones pendientes
-              </div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Panel de Notificaciones */}
+        <NotificacionesPanel
+          open={notificacionesOpen}
+          onClose={() => setNotificacionesOpen(false)}
+        />
 
         {/* Theme Switcher */}
         <DropdownMenu>
